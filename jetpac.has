@@ -1,0 +1,1009 @@
+#pragma lockreg(a5);
+
+extern func SetGraphicsMode(mode:int) -> int;
+extern func SwapScreen() -> void;
+extern func ClearScreen() -> void;
+extern func Show() -> void;
+extern func WaitVBlank() -> void;
+extern func SetColor(index:int, color:int) -> void;
+extern func HeapInit() -> void;
+
+extern func InitKeyboard() -> void;
+extern func GetKey() -> byte;
+extern func ReadJoystick() -> u32;
+extern func ReadJoystickFire() -> int;
+
+extern func CreateBob(descriptor_ptr:int, b:int) -> int;
+extern func PasteBob(handle:int, x:int, y:int, mode:int) -> void;
+extern func DestroyBob(handle:int) -> void;
+extern func GetBobBackground(handle:int, x:int, y:int) -> void;
+extern func PasteBackground(handle:int, x:int, y:int) -> void;
+extern func GetBobPalette(handle:int) -> int;
+
+extern var jetpack_tileset:int;
+extern var gfx_current_screen_ptr:int;
+extern var jetpacspritesheet_deadl_000:int;
+extern var jetpacspritesheet_deadl_001:int;
+extern var jetpacspritesheet_deadl_002:int;
+extern var jetpacspritesheet_deadl_003:int;
+extern var jetpacspritesheet_deadl_004:int;
+extern var jetpacspritesheet_deadr_000:int;
+extern var jetpacspritesheet_deadr_001:int;
+extern var jetpacspritesheet_deadr_002:int;
+extern var jetpacspritesheet_deadr_003:int;
+extern var jetpacspritesheet_deadr_004:int;
+extern var jetpacspritesheet_energy:int;
+extern var jetpacspritesheet_flyl_000:int;
+extern var jetpacspritesheet_flyl_001:int;
+extern var jetpacspritesheet_flyl_002:int;
+extern var jetpacspritesheet_flyl_003:int;
+extern var jetpacspritesheet_flyl_004:int;
+extern var jetpacspritesheet_flylf_000:int;
+extern var jetpacspritesheet_flylf_001:int;
+extern var jetpacspritesheet_flylf_002:int;
+extern var jetpacspritesheet_flylf_003:int;
+extern var jetpacspritesheet_flylf_004:int;
+extern var jetpacspritesheet_flyr_000:int;
+extern var jetpacspritesheet_flyr_001:int;
+extern var jetpacspritesheet_flyr_002:int;
+extern var jetpacspritesheet_flyr_003:int;
+extern var jetpacspritesheet_flyr_004:int;
+extern var jetpacspritesheet_flyrf_000:int;
+extern var jetpacspritesheet_flyrf_001:int;
+extern var jetpacspritesheet_flyrf_002:int;
+extern var jetpacspritesheet_flyrf_003:int;
+extern var jetpacspritesheet_flyrf_004:int;
+extern var jetpacspritesheet_flyu_000:int;
+extern var jetpacspritesheet_flyu_001:int;
+extern var jetpacspritesheet_flyu_002:int;
+extern var jetpacspritesheet_flyu_003:int;
+extern var jetpacspritesheet_flyu_004:int;
+extern var jetpacspritesheet_fuel:int;
+extern var jetpacspritesheet_meteor:int;
+extern var jetpacspritesheet_ufo_0002:int;
+extern var jetpacspritesheet_ufo_0003:int;
+extern var jetpacspritesheet_ufo_0004:int;
+extern var jetpacspritesheet_ufo_0005:int;
+extern var jetpacspritesheet_walkl_000:int;
+extern var jetpacspritesheet_walkl_001:int;
+extern var jetpacspritesheet_walkl_002:int;
+extern var jetpacspritesheet_walkl_003:int;
+extern var jetpacspritesheet_walkl_004:int;
+extern var jetpacspritesheet_walkl_005:int;
+extern var jetpacspritesheet_walkr_000:int;
+extern var jetpacspritesheet_walkr_001:int;
+extern var jetpacspritesheet_walkr_002:int;
+extern var jetpacspritesheet_walkr_003:int;
+extern var jetpacspritesheet_walkr_004:int;
+extern var jetpacspritesheet_walkr_005:int;
+
+const KEY_ESC = 69;
+const JOY_RIGHT = 2;
+const JOY_DOWN = 4;
+const JOY_LEFT = 512;
+const JOY_UP = 1024;
+const PLAYER_SPEED = 2;
+const PLAYER_MAX_X = 288;
+const PLAYER_MAX_Y = 224;
+const PLAYER_BOB_W_M1 = 16;  // sprite right-edge offset (17 px wide -> last pixel at +16)
+const PLAYER_BOB_H_M1 = 30;  // sprite bottom-edge offset (31 px tall -> last pixel at +30)
+
+const MAP_WIDTH = 20;
+const MAP_HEIGHT = 10;
+const TILE_WIDTH = 16;
+const TILE_HEIGHT = 16;
+
+const MAX_COLORS = 32;
+const TOTAL_BOB_ASSETS = 54;
+const WALK_ANIM_FRAMES = 6;
+const WALK_ANIM_RATE = 4;
+const FLY_ANIM_FRAMES = 5;
+const FLY_ANIM_RATE = 4;
+const GRAVITY = 1;
+const THRUST = 3;
+const MAX_VEL_DOWN = 6;
+const LASER_SPEED = 8;
+const LASER_RANGE_STEPS = 40;  // 40 steps x 8 px = 320 px — stops at screen edge
+const LASER_MAX_X = 304;       // right boundary (beam is 16 px wide so max byte-start)
+const LASER_Y_OFFSET = 12;
+const MAX_BEAMS = 4;
+
+const MAX_LEVELS = 1;
+
+    public CreateMap;
+    public CopyLevelBuffer;
+    public RefreshLevelBuffersIfDirty;
+    public IsPositionWalkable;
+
+    public level_start_x;
+    public level_start_y;
+
+code main:
+
+    public main;
+
+    asm {
+main:
+        jsr TakeSystem
+        jsr game_start
+        jmp ReleaseSystem
+    }
+
+    native proc peek_w(__reg(a0) a: long) -> int {
+        asm {
+            move.w (a0),d0
+            ext.l d0
+        }
+    }
+
+    proc load_all_assets() -> int {
+        var id:long;
+        var pal:int;
+        var i:int;
+
+        // Only create BOBs actually referenced by the render loop.
+        // Slots [0-10], [16-20], [26-41] are reserved for future use (left 0 / null).
+        id = CreateBob(&jetpacspritesheet_flyl_000, 1); if (id == -1) { return -1; } asset_handles[11] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_001, 1); if (id == -1) { return -1; } asset_handles[12] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_002, 1); if (id == -1) { return -1; } asset_handles[13] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_003, 1); if (id == -1) { return -1; } asset_handles[14] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_004, 1); if (id == -1) { return -1; } asset_handles[15] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_000, 1); if (id == -1) { return -1; } asset_handles[21] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_001, 1); if (id == -1) { return -1; } asset_handles[22] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_002, 1); if (id == -1) { return -1; } asset_handles[23] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_003, 1); if (id == -1) { return -1; } asset_handles[24] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_004, 1); if (id == -1) { return -1; } asset_handles[25] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_000, 1); if (id == -1) { return -1; } asset_handles[42] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_001, 1); if (id == -1) { return -1; } asset_handles[43] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_002, 1); if (id == -1) { return -1; } asset_handles[44] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_003, 1); if (id == -1) { return -1; } asset_handles[45] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_004, 1); if (id == -1) { return -1; } asset_handles[46] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_005, 1); if (id == -1) { return -1; } asset_handles[47] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_000, 1); if (id == -1) { return -1; } asset_handles[48] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_001, 1); if (id == -1) { return -1; } asset_handles[49] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_002, 1); if (id == -1) { return -1; } asset_handles[50] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_003, 1); if (id == -1) { return -1; } asset_handles[51] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_004, 1); if (id == -1) { return -1; } asset_handles[52] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_005, 1); if (id == -1) { return -1; } asset_handles[53] = id;
+
+        player_bob_left = asset_handles[42];
+        player_bob_right = asset_handles[48];
+
+        id = CreateBob(&jetpacspritesheet_walkl_000, 1); if (id == -1) { return -1; } walk_left_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_001, 1); if (id == -1) { return -1; } walk_left_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_002, 1); if (id == -1) { return -1; } walk_left_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_003, 1); if (id == -1) { return -1; } walk_left_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_004, 1); if (id == -1) { return -1; } walk_left_bobs_b[4] = id;
+        id = CreateBob(&jetpacspritesheet_walkl_005, 1); if (id == -1) { return -1; } walk_left_bobs_b[5] = id;
+
+        id = CreateBob(&jetpacspritesheet_walkr_000, 1); if (id == -1) { return -1; } walk_right_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_001, 1); if (id == -1) { return -1; } walk_right_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_002, 1); if (id == -1) { return -1; } walk_right_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_003, 1); if (id == -1) { return -1; } walk_right_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_004, 1); if (id == -1) { return -1; } walk_right_bobs_b[4] = id;
+        id = CreateBob(&jetpacspritesheet_walkr_005, 1); if (id == -1) { return -1; } walk_right_bobs_b[5] = id;
+
+        player_bob_left_b = walk_left_bobs_b[0];
+        player_bob_right_b = walk_right_bobs_b[0];
+
+        id = CreateBob(&jetpacspritesheet_flyl_000, 1); if (id == -1) { return -1; } fly_left_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_001, 1); if (id == -1) { return -1; } fly_left_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_002, 1); if (id == -1) { return -1; } fly_left_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_003, 1); if (id == -1) { return -1; } fly_left_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_flyl_004, 1); if (id == -1) { return -1; } fly_left_bobs_b[4] = id;
+
+        id = CreateBob(&jetpacspritesheet_flyr_000, 1); if (id == -1) { return -1; } fly_right_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_001, 1); if (id == -1) { return -1; } fly_right_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_002, 1); if (id == -1) { return -1; } fly_right_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_003, 1); if (id == -1) { return -1; } fly_right_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_flyr_004, 1); if (id == -1) { return -1; } fly_right_bobs_b[4] = id;
+
+        // Fire-pose BOBs: one frozen last-frame BOB per direction per screen buffer.
+        id = CreateBob(&jetpacspritesheet_flylf_004, 1); if (id == -1) { return -1; } fire_bob_left_a = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } fire_bob_right_a = id;
+        id = CreateBob(&jetpacspritesheet_flylf_004, 1); if (id == -1) { return -1; } fire_bob_left_b = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } fire_bob_right_b = id;
+
+        player_face_right = 1;
+
+        pal = GetBobPalette(player_bob_right);
+        for i = 0 to MAX_COLORS - 1
+        {
+            call SetColor(i, peek_w(pal + (i << 1)));
+        }
+
+        return 0;
+    }
+
+    proc update_player() -> void {
+        var joy:u32;
+        var is_walking:byte;
+        var new_x:int;
+        var new_y:int;
+        var x_ok:u8;
+        var y_ok:u8;
+        var vy:int;
+
+        joy = ReadJoystick();
+
+        new_x = player_x;
+        new_y = player_y;
+
+        if(joy & JOY_LEFT)  { new_x = new_x - PLAYER_SPEED; player_face_right = 0; }
+        if(joy & JOY_RIGHT) { new_x = new_x + PLAYER_SPEED; player_face_right = 1; }
+
+        // Gravity + jetpack thrust (slow start, fast finish)
+        player_thrusting = 0;
+        vy = vel_y;
+        vy = vy + GRAVITY;
+        if(vy > MAX_VEL_DOWN) { vy = MAX_VEL_DOWN; }
+
+        if(joy & JOY_UP)
+        {
+            player_thrusting = 1;
+            vy = vy - THRUST;
+            if(vy < -6) { vy = -6; }
+        }
+
+        vel_y = vy;
+        new_y = new_y + vy;
+
+        // Wrap X, clamp Y before collision check
+        if(new_x < 0) { new_x = PLAYER_MAX_X; }
+        if(new_x > PLAYER_MAX_X) { new_x = 0; }
+
+        if(new_y < 0) { new_y = 0; vel_y = 0; }
+        if(new_y > PLAYER_MAX_Y) { new_y = PLAYER_MAX_Y; vel_y = 0; }
+
+        // Apply each axis only when the new position is tile-clear
+        x_ok = CheckPlayerCollision(new_x, player_y);
+        if(x_ok != 0) { player_x = new_x; }
+
+        y_ok = CheckPlayerCollision(player_x, new_y);
+        if(y_ok != 0) { player_y = new_y; }
+        else { vel_y = 0; }
+
+        is_walking = 0;
+        if(joy & JOY_LEFT)  { is_walking = 1; }
+        if(joy & JOY_RIGHT) { is_walking = 1; }
+
+        if(is_walking)
+        {
+            walk_timer = walk_timer + 1;
+            if(walk_timer >= WALK_ANIM_RATE)
+            {
+                walk_timer = 0;
+                walk_frame = walk_frame + 1;
+                if(walk_frame >= WALK_ANIM_FRAMES) { walk_frame = 0; }
+            }
+        }
+        else
+        {
+            walk_frame = 0;
+            walk_timer = 0;
+        }
+
+        if(player_thrusting != 0)
+        {
+            fly_timer = fly_timer + 1;
+            if(fly_timer >= FLY_ANIM_RATE)
+            {
+                fly_timer = 0;
+                fly_frame = fly_frame + 1;
+                if(fly_frame >= FLY_ANIM_FRAMES) { fly_frame = 0; }
+            }
+        }
+        else
+        {
+            fly_frame = 0;
+            fly_timer = 0;
+        }
+
+        // Fire: only permitted while thrusting (airborne with jetpack on).
+        // On shelf (not thrusting) firing is disallowed and state is cleared.
+        // Single frozen-frame BOBs are used so no fly_frame locking is needed.
+        player_firing = 0;
+        if(player_thrusting != 0)
+        {
+            if(ReadJoystickFire() != 0)
+            {
+                player_firing = 1;
+            }
+        }
+    }
+
+    // Up to MAX_BEAMS simultaneous horizontal laser beams, byte-aligned planar writes.
+    proc update_laser() -> void {
+        var i:int;
+        var idx:int;
+        var found:byte;
+        var spawn_x:int;
+        var spawn_y:int;
+        var next_x:int;
+        var head_x:int;
+
+        // Rising-edge fire: find first free slot and spawn.
+        if(player_firing != 0)
+        {
+            if(laser_fire_prev == 0)
+            {
+                found = 0;
+                idx = 0;
+                for i = 0 to MAX_BEAMS - 1
+                {
+                    if(beam_active[i] == 0)
+                    {
+                        if(found == 0) { idx = i; found = 1; }
+                    }
+                }
+
+                if(found != 0)
+                {
+                    if(player_face_right != 0)
+                    {
+                        spawn_x = player_x + 16;
+                        beam_dir[idx] = 1;
+                    }
+                    else
+                    {
+                        spawn_x = player_x - 8;
+                        beam_dir[idx] = 0;
+                    }
+
+                    if(spawn_x < 0) { spawn_x = 0; }
+                    if(spawn_x > LASER_MAX_X) { spawn_x = LASER_MAX_X; }
+                    spawn_x = (spawn_x >> 3) << 3;
+
+                    spawn_y = player_y + LASER_Y_OFFSET;
+                    if(spawn_y < 0) { spawn_y = 0; }
+                    if(spawn_y > 255) { spawn_y = 255; }
+
+                    if(beam_dir[idx] != 0) { head_x = spawn_x + 15; }
+                    else { head_x = spawn_x; }
+
+                    if(IsPositionWalkable(head_x, spawn_y, 0) != 0)
+                    {
+                        beam_x[idx] = spawn_x;
+                        beam_y[idx] = spawn_y;
+                        beam_timer[idx] = LASER_RANGE_STEPS;
+                        beam_color_phase[idx] = 0;
+                        beam_active[idx] = 1;
+                    }
+                }
+            }
+        }
+
+        laser_fire_prev = player_firing;
+
+        // Advance all active beams.
+        for i = 0 to MAX_BEAMS - 1
+        {
+            if(beam_active[i] == 0) { continue; }
+
+            beam_color_phase[i] = (beam_color_phase[i] + 1) & 3;
+
+            next_x = beam_x[i];
+            if(beam_dir[i] != 0)
+            {
+                next_x = next_x + LASER_SPEED;
+                if(next_x > LASER_MAX_X) { beam_active[i] = 0; continue; }
+                head_x = next_x + 15;
+            }
+            else
+            {
+                next_x = next_x - LASER_SPEED;
+                if(next_x < 0) { beam_active[i] = 0; continue; }
+                head_x = next_x;
+            }
+
+            if(IsPositionWalkable(head_x, beam_y[i], 0) == 0)
+            {
+                beam_active[i] = 0;
+                continue;
+            }
+
+            beam_x[i] = next_x;
+
+            if(beam_timer[i] > 0)
+            {
+                beam_timer[i] = beam_timer[i] - 1;
+            }
+
+            if(beam_timer[i] == 0)
+            {
+                beam_active[i] = 0;
+            }
+        }
+    }
+
+    // Erase then redraw all active beams for the current buffer.
+    proc draw_laser_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var prev_x:u16;
+        var prev_y:u16;
+        var prev_valid:int;
+        var cur_x:u16;
+        var cur_y:u16;
+        var color_idx:int;
+        var p0:byte;
+        var p1:byte;
+        var p2:byte;
+        var p3:byte;
+        var p4:byte;
+
+        for i = 0 to MAX_BEAMS - 1
+        {
+            if(use_b != 0)
+            {
+                prev_x = beam_prev_x_b[i];
+                prev_y = beam_prev_y_b[i];
+                prev_valid = beam_prev_valid_b[i];
+            }
+            else
+            {
+                prev_x = beam_prev_x_a[i];
+                prev_y = beam_prev_y_a[i];
+                prev_valid = beam_prev_valid_a[i];
+            }
+
+            if(prev_valid != 0)
+            {
+                asm {
+                    move.l gfx_current_screen_ptr,a0
+                    move.l #level_screen,a1
+                    move.w @prev_y,d0
+                    ext.l d0
+                    mulu.w #200,d0
+                    add.l d0,a0
+                    add.l d0,a1
+                    move.w @prev_x,d1
+                    ext.l d1
+                    lsr.l #3,d1
+                    adda.l d1,a0
+                    adda.l d1,a1
+                    move.b (a1),(a0)
+                    move.b 40(a1),40(a0)
+                    move.b 80(a1),80(a0)
+                    move.b 120(a1),120(a0)
+                    move.b 160(a1),160(a0)
+                    move.b 1(a1),1(a0)
+                    move.b 41(a1),41(a0)
+                    move.b 81(a1),81(a0)
+                    move.b 121(a1),121(a0)
+                    move.b 161(a1),161(a0)
+                }
+            }
+
+            if(beam_active[i] == 0)
+            {
+                if(use_b != 0) { beam_prev_valid_b[i] = 0; }
+                else { beam_prev_valid_a[i] = 0; }
+                continue;
+            }
+
+            color_idx = 31;
+            if((beam_color_phase[i] & 3) == 1) { color_idx = 28; }
+            if((beam_color_phase[i] & 3) == 2) { color_idx = 24; }
+            if((beam_color_phase[i] & 3) == 3) { color_idx = 14; }
+
+            p0 = 0; p1 = 0; p2 = 0; p3 = 0; p4 = 0;
+            if(color_idx & 1)  { p0 = 255; }
+            if(color_idx & 2)  { p1 = 255; }
+            if(color_idx & 4)  { p2 = 255; }
+            if(color_idx & 8)  { p3 = 255; }
+            if(color_idx & 16) { p4 = 255; }
+
+            cur_x = beam_x[i];
+            cur_y = beam_y[i];
+
+            asm {
+                move.l gfx_current_screen_ptr,a0
+                move.w @cur_y,d0
+                ext.l d0
+                mulu.w #200,d0
+                add.l d0,a0
+                move.w @cur_x,d1
+                ext.l d1
+                lsr.l #3,d1
+                adda.l d1,a0
+                move.b @p0,(a0)
+                move.b @p1,40(a0)
+                move.b @p2,80(a0)
+                move.b @p3,120(a0)
+                move.b @p4,160(a0)
+                move.b @p0,1(a0)
+                move.b @p1,41(a0)
+                move.b @p2,81(a0)
+                move.b @p3,121(a0)
+                move.b @p4,161(a0)
+            }
+
+            if(use_b != 0)
+            {
+                beam_prev_x_b[i] = cur_x;
+                beam_prev_y_b[i] = cur_y;
+                beam_prev_valid_b[i] = 1;
+            }
+            else
+            {
+                beam_prev_x_a[i] = cur_x;
+                beam_prev_y_a[i] = cur_y;
+                beam_prev_valid_a[i] = 1;
+            }
+        }
+    }
+
+    // Returns 1 when the 17x31 player box at (px,py) is fully clear of solid tiles.
+    // Three rows are probed (top / +TILE_HEIGHT / bottom) so a tile row that falls
+    // entirely between the top and bottom corners is never skipped.
+    proc CheckPlayerCollision(px:int, py:int) -> u8 {
+        if(IsPositionWalkable(px,                   py,                   0) == 0) { return 0; }  // top-left
+        if(IsPositionWalkable(px + PLAYER_BOB_W_M1, py,                   0) == 0) { return 0; }  // top-right
+        if(IsPositionWalkable(px,                   py + TILE_HEIGHT,     0) == 0) { return 0; }  // mid-left
+        if(IsPositionWalkable(px + PLAYER_BOB_W_M1, py + TILE_HEIGHT,     0) == 0) { return 0; }  // mid-right
+        if(IsPositionWalkable(px,                   py + PLAYER_BOB_H_M1, 0) == 0) { return 0; }  // bottom-left
+        if(IsPositionWalkable(px + PLAYER_BOB_W_M1, py + PLAYER_BOB_H_M1, 0) == 0) { return 0; }  // bottom-right
+        return 1;
+    }
+
+    proc RefreshLevelBuffersIfDirty() -> void {
+        if(level_dirty == 0)
+        {
+            return;
+        }
+
+        call CopyLevelBuffer();
+        call SwapScreen();
+        call CopyLevelBuffer();
+        call SwapScreen();
+
+        level_dirty = 0;
+    }
+
+    proc init_game() -> int {
+        player_x = 160 - 8;
+        player_y = 113;   // feet (y+30) at pixel 143, one pixel above floor row 9 (y=144)
+
+        call HeapInit();
+
+        if(SetGraphicsMode(0) == -1)
+        {
+            return -1;
+        }
+
+        if(load_all_assets() == -1)
+        {
+            return -1;
+        }
+
+        call CreateMap(1);
+        level_dirty = 1;
+        call RefreshLevelBuffersIfDirty();
+
+        call InitKeyboard();
+
+        return 0;
+    }
+
+    proc game_start() -> int {
+        var run:bool = 1;
+        var key:byte;
+        var screen:int = 1;
+        var prev_x_a:int;
+        var prev_y_a:int;
+        var prev_bob_a:int;
+        var prev_x_b:int;
+        var prev_y_b:int;
+        var prev_bob_b:int;
+        var draw_bob:int;
+        var walk_idx:int;
+
+        if(init_game() == -1)
+        {
+            return -1;
+        }
+
+        // Prime both buffers with map + player so first shown frame is stable.
+        prev_x_a = player_x;
+        prev_y_a = player_y;
+        prev_bob_a = player_bob_right;
+        prev_x_b = player_x;
+        prev_y_b = player_y;
+        prev_bob_b = player_bob_right_b;
+
+        call CopyLevelBuffer();
+        call GetBobBackground(player_bob_right, player_x, player_y);
+        call PasteBob(player_bob_right, player_x, player_y, 1);
+        call SwapScreen();
+        call CopyLevelBuffer();
+        call GetBobBackground(player_bob_right_b, player_x, player_y);
+        call PasteBob(player_bob_right_b, player_x, player_y, 1);
+
+        while (run == 1)
+        {
+            key = GetKey();
+            if(key == KEY_ESC)
+            {
+                run = 0;
+            }
+
+            call SwapScreen();
+            call update_player();
+            call update_laser();
+
+            if(screen == 0)
+            {
+                screen = 1;
+                if(player_thrusting != 0)
+                {
+                    if(player_firing != 0)
+                    {
+                        if(player_face_right == 1) { draw_bob = fire_bob_right_b; }
+                        else { draw_bob = fire_bob_left_b; }
+                    }
+                    else
+                    {
+                        walk_idx = fly_frame;
+                        if(player_face_right == 1) { draw_bob = fly_right_bobs_b[walk_idx]; }
+                        else { draw_bob = fly_left_bobs_b[walk_idx]; }
+                    }
+                }
+                else
+                {
+                    walk_idx = walk_frame;
+                    if(player_face_right == 1) { draw_bob = walk_right_bobs_b[walk_idx]; }
+                    else { draw_bob = walk_left_bobs_b[walk_idx]; }
+                }
+
+                if(prev_x_b != player_x || prev_y_b != player_y || prev_bob_b != draw_bob)
+                {
+                    call PasteBackground(prev_bob_b, prev_x_b, prev_y_b);
+                    call GetBobBackground(draw_bob, player_x, player_y);
+                    call PasteBob(draw_bob, player_x, player_y, 1);
+                    prev_x_b = player_x;
+                    prev_y_b = player_y;
+                    prev_bob_b = draw_bob;
+                }
+
+                call draw_laser_on_current_screen(1);
+            }
+            else
+            {
+                screen = 0;
+                if(player_thrusting != 0)
+                {
+                    if(player_firing != 0)
+                    {
+                        if(player_face_right == 1) { draw_bob = fire_bob_right_a; }
+                        else { draw_bob = fire_bob_left_a; }
+                    }
+                    else
+                    {
+                        if(player_face_right == 1) { walk_idx = 21 + fly_frame; }
+                        else { walk_idx = 11 + fly_frame; }
+                        draw_bob = asset_handles[walk_idx];
+                    }
+                }
+                else
+                {
+                    if(player_face_right == 1) { walk_idx = 48 + walk_frame; }
+                    else { walk_idx = 42 + walk_frame; }
+                    draw_bob = asset_handles[walk_idx];
+                }
+
+                if(prev_x_a != player_x || prev_y_a != player_y || prev_bob_a != draw_bob)
+                {
+                    call PasteBackground(prev_bob_a, prev_x_a, prev_y_a);
+                    call GetBobBackground(draw_bob, player_x, player_y);
+                    call PasteBob(draw_bob, player_x, player_y, 1);
+                    prev_x_a = player_x;
+                    prev_y_a = player_y;
+                    prev_bob_a = draw_bob;
+                }
+
+                call draw_laser_on_current_screen(0);
+            }
+
+            call WaitVBlank();
+            call Show();
+        }
+
+        return 0;
+    }
+
+code level_code:
+
+    proc GetTileAt(x:u8, y:u8) -> u8
+    {
+        // Bounds check
+        if (x >= MAP_WIDTH || y >= MAP_HEIGHT)
+        {
+            return 255;  // Out of bounds - treat as obstacle
+        }
+        
+        // Get tile from map (assuming map1 for now)
+        return map_data[y * MAP_WIDTH + x];
+    }
+
+    proc IsPositionWalkable(x:u16, y:u16, area:u8) -> u8
+    {
+        var tile:u8;
+        var check_x:u8;
+        var check_y:u8;
+        var tx:u8;
+        var ty:u8;
+        
+        check_x = (x >> 4);  // x / 16
+        check_y = (y >> 4);  // y / 16
+
+        for ty = 0 to area
+        {
+            for tx = 0 to area
+            {
+                tile = GetTileAt(check_x + tx, check_y + ty);
+                
+                // tile 0 is empty air; any non-zero tile is solid
+                if (tile != 0)
+                {
+                    return 0;  // Solid tile blocks movement
+                }
+            }
+        }
+        
+        return 1;  // Walkable
+    }
+
+    proc CreateMap(level:byte) -> void
+    {
+        var x:u16;
+        var y:u16;
+        var tile:u8;
+        var map_ptr:byte*;
+
+        call ClearLevelBuffer();
+
+        // Select map data based on level
+        if (level == 1)
+        {
+            map_data = &map1;
+            level_start_x = 13; // Example start position for level 1
+            level_start_y = 5;
+        }
+        else
+        {
+            // Default to map1 if level not recognized
+            map_data = &map1;
+            level_start_x = 13; // Example start position for level 1
+            level_start_y = 5;
+        }
+
+        // Load global into typed local for array access
+        map_ptr = map_data;
+
+        // Create the map
+        for y = 0 to MAP_HEIGHT - 1
+        {
+            for x = 0 to MAP_WIDTH - 1
+            {
+                tile = map_ptr[y * MAP_WIDTH + x];
+                if( tile == 0)
+                {
+                    continue; // Skip empty tiles (this extends d0 to long!)
+                }
+
+                asm {
+                    ; Get tile code from map_data (is now in d0)
+                    ;clr.l d0
+                    ;move.b @tile,d0
+                    
+                    ; Get logical 16x16 tile index (already in d0 from tile variable)
+                    subq.l #1,d0            ; Adjust tile index (tiles start from 1 in map)
+                    
+                    ; Clamp to valid range (0-63): 8x8 logical tiles
+                    cmp.l #64,d0
+                    blt.s .tile_valid
+                    moveq #0,d0             ; Out of range - use tile 0
+.tile_valid:
+
+                    ; Convert logical 16x16 tile index to base 8x8 chunk index.
+                    ; 8x8 chunk grid is 16x16. Logical tiles are 8x8 (2x2 chunks each).
+                    ; base = (tile_y * 32) + (tile_x * 2)
+                    move.l d0,d5
+                    andi.l #7,d5            ; tile_x in logical grid (0..7)
+                    add.l d5,d5             ; tile_x * 2
+                    move.l d0,d6
+                    lsr.l #3,d6             ; tile_y in logical grid (0..7)
+                    mulu.w #32,d6           ; tile_y * (2 * 16 chunks per row)
+                    add.l d6,d5             ; d5 = base 8x8 chunk index
+
+                    ; Calculate screen destination address
+                    ; Screen is line-interleaved: 320 pixels (40 bytes) wide, 5 bitplanes
+                    ; Each screen row = 40 bytes × 5 planes = 200 bytes
+                    move.l #level_screen,a0
+                    move.w @y,d0
+                    ext.l d0
+                    mulu.w #(16*40*5),d0    ; y * 3200 bytes (16 pixel rows per tile * 200 bytes per screen row)
+                    
+                    move.w @x,d1
+                    ext.l d1
+                    add.l d1,d1             ; 2 bytes per 16px tile horizontally
+                    add.l d1,d0
+                    add.l d0,a0             ; a0 = screen base address for this tile
+
+                    ; Draw top-left 8x8 chunk (base + 0)
+                    move.l #jetpack_tileset,a1
+                    move.l d5,d0
+                    mulu.w #40,d0
+                    add.l d0,a1
+                    movea.l a0,a2
+                    moveq #(8-1),d7
+.draw_tl_row:
+                    move.b (a1)+,d0
+                    move.b d0,(a2)
+                    move.b (a1)+,d0
+                    move.b d0,40(a2)
+                    move.b (a1)+,d0
+                    move.b d0,80(a2)
+                    move.b (a1)+,d0
+                    move.b d0,120(a2)
+                    move.b (a1)+,d0
+                    move.b d0,160(a2)
+                    add.l #200,a2
+                    dbf d7,.draw_tl_row
+
+                    ; Draw top-right 8x8 chunk (base + 1)
+                    move.l #jetpack_tileset,a1
+                    move.l d5,d0
+                    addq.l #1,d0
+                    mulu.w #40,d0
+                    add.l d0,a1
+                    movea.l a0,a2
+                    adda.l #1,a2
+                    moveq #(8-1),d7
+.draw_tr_row:
+                    move.b (a1)+,d0
+                    move.b d0,(a2)
+                    move.b (a1)+,d0
+                    move.b d0,40(a2)
+                    move.b (a1)+,d0
+                    move.b d0,80(a2)
+                    move.b (a1)+,d0
+                    move.b d0,120(a2)
+                    move.b (a1)+,d0
+                    move.b d0,160(a2)
+                    add.l #200,a2
+                    dbf d7,.draw_tr_row
+
+                    ; Draw bottom-left 8x8 chunk (base + 16)
+                    move.l #jetpack_tileset,a1
+                    move.l d5,d0
+                    add.l #16,d0
+                    mulu.w #40,d0
+                    add.l d0,a1
+                    movea.l a0,a2
+                    adda.l #1600,a2         ; 8 rows down
+                    moveq #(8-1),d7
+.draw_bl_row:
+                    move.b (a1)+,d0
+                    move.b d0,(a2)
+                    move.b (a1)+,d0
+                    move.b d0,40(a2)
+                    move.b (a1)+,d0
+                    move.b d0,80(a2)
+                    move.b (a1)+,d0
+                    move.b d0,120(a2)
+                    move.b (a1)+,d0
+                    move.b d0,160(a2)
+                    add.l #200,a2
+                    dbf d7,.draw_bl_row
+
+                    ; Draw bottom-right 8x8 chunk (base + 17)
+                    move.l #jetpack_tileset,a1
+                    move.l d5,d0
+                    add.l #17,d0
+                    mulu.w #40,d0
+                    add.l d0,a1
+                    movea.l a0,a2
+                    adda.l #1601,a2         ; 8 rows down + 1 byte right
+                    moveq #(8-1),d7
+.draw_br_row:
+                    move.b (a1)+,d0
+                    move.b d0,(a2)
+                    move.b (a1)+,d0
+                    move.b d0,40(a2)
+                    move.b (a1)+,d0
+                    move.b d0,80(a2)
+                    move.b (a1)+,d0
+                    move.b d0,120(a2)
+                    move.b (a1)+,d0
+                    move.b d0,160(a2)
+                    add.l #200,a2
+                    dbf d7,.draw_br_row
+                }
+            }
+        }
+    }
+
+    proc ClearLevelBuffer() -> void
+    {
+        asm {
+            move.l #level_screen,a0
+            move.l #320*256/32*5-1,d0
+            moveq #0,d1
+.l1:        move.l d1,(a0)+
+            dbra d0,.l1
+        }
+    }
+
+    proc CopyLevelBuffer() -> void
+    {
+        asm {
+            move.l #level_screen,a0
+            move.l gfx_current_screen_ptr,a1
+            move.l #320*256/32*5-1,d0
+.copy_loop:
+            move.l (a0)+,(a1)+
+            dbra d0,.copy_loop
+        }
+    }
+
+data data_map1:
+    map1.b = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,60,27,27,27,61,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,34,29,29,29,17,0,0,0,0,0,0,12,27,27,27,31,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,29,13,29,29,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+4,14,14,14,14,14,14,14,13,14,14,14,14,14,14,28,30,14,14,9}
+
+bss level_bss:
+    level_start_x.b: 1
+    level_start_y.b: 1
+    map_data.l: 1  // u8* pointer (4 bytes, untyped)
+    level_screen.b[51200]   // 320 * 256 / 8 * 5 bitplanes
+    
+data main_data:
+    player_x.w = 0
+    player_y.w = 0
+    level_dirty.b = 0
+    player_face_right.b = 1
+    player_bob_left.l = 0
+    player_bob_right.l = 0
+    player_bob_left_b.l = 0
+    player_bob_right_b.l = 0
+    walk_frame.b = 0
+    walk_timer.b = 0
+    vel_y.l = 0
+    player_thrusting.b = 0
+    fly_frame.b = 0
+    fly_timer.b = 0
+    player_firing.b = 0
+    fire_bob_left_a.l = 0
+    fire_bob_right_a.l = 0
+    fire_bob_left_b.l = 0
+    fire_bob_right_b.l = 0
+    laser_fire_prev.b = 0
+
+bss bobs_bss:
+    asset_handles.l[TOTAL_BOB_ASSETS]
+    walk_left_bobs_b.l[6]
+    walk_right_bobs_b.l[6]
+    fly_left_bobs_b.l[5]
+    fly_right_bobs_b.l[5]
+
+bss laser_bss:
+    beam_active.l[MAX_BEAMS]
+    beam_dir.l[MAX_BEAMS]
+    beam_timer.l[MAX_BEAMS]
+    beam_color_phase.l[MAX_BEAMS]
+    beam_x.l[MAX_BEAMS]
+    beam_y.l[MAX_BEAMS]
+    beam_prev_x_a.l[MAX_BEAMS]
+    beam_prev_y_a.l[MAX_BEAMS]
+    beam_prev_valid_a.l[MAX_BEAMS]
+    beam_prev_x_b.l[MAX_BEAMS]
+    beam_prev_y_b.l[MAX_BEAMS]
+    beam_prev_valid_b.l[MAX_BEAMS]
