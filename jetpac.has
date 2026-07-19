@@ -428,20 +428,12 @@ main:
         }
     }
 
-    // Erase then redraw all active beams for the current buffer.
-    proc draw_laser_on_current_screen(use_b:byte) -> void {
+    // Erase previous beam pixels for current buffer.
+    proc erase_laser_on_current_screen(use_b:byte) -> void {
         var i:int;
         var prev_x:u16;
         var prev_y:u16;
         var prev_valid:int;
-        var cur_x:u16;
-        var cur_y:u16;
-        var color_idx:int;
-        var p0:byte;
-        var p1:byte;
-        var p2:byte;
-        var p3:byte;
-        var p4:byte;
 
         for i = 0 to MAX_BEAMS - 1
         {
@@ -486,10 +478,27 @@ main:
                 }
             }
 
+            if(use_b != 0) { beam_prev_valid_b[i] = 0; }
+            else { beam_prev_valid_a[i] = 0; }
+        }
+    }
+
+    // Draw all active beams for the current buffer.
+    proc draw_laser_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var cur_x:u16;
+        var cur_y:u16;
+        var color_idx:int;
+        var p0:byte;
+        var p1:byte;
+        var p2:byte;
+        var p3:byte;
+        var p4:byte;
+
+        for i = 0 to MAX_BEAMS - 1
+        {
             if(beam_active[i] == 0)
             {
-                if(use_b != 0) { beam_prev_valid_b[i] = 0; }
-                else { beam_prev_valid_a[i] = 0; }
                 continue;
             }
 
@@ -648,6 +657,10 @@ main:
             if(screen == 0)
             {
                 screen = 1;
+                call erase_laser_on_current_screen(1);
+                call erase_meteors_on_current_screen(1);
+                call PasteBackground(prev_bob_b, prev_x_b, prev_y_b);
+
                 if(player_thrusting != 0)
                 {
                     if(player_firing != 0)
@@ -669,15 +682,12 @@ main:
                     else { draw_bob = walk_left_bobs_b[walk_idx]; }
                 }
 
-                if(prev_x_b != player_x || prev_y_b != player_y || prev_bob_b != draw_bob)
-                {
-                    call PasteBackground(prev_bob_b, prev_x_b, prev_y_b);
-                    call GetBobBackground(draw_bob, player_x, player_y);
-                    call PasteBob(draw_bob, player_x, player_y, 1);
-                    prev_x_b = player_x;
-                    prev_y_b = player_y;
-                    prev_bob_b = draw_bob;
-                }
+                call GetBobBackground(draw_bob, player_x, player_y);
+                call capture_meteors_background_on_current_screen(1);
+                call PasteBob(draw_bob, player_x, player_y, 1);
+                prev_x_b = player_x;
+                prev_y_b = player_y;
+                prev_bob_b = draw_bob;
 
                 call draw_meteors_on_current_screen(1);
                 call draw_laser_on_current_screen(1);
@@ -685,6 +695,10 @@ main:
             else
             {
                 screen = 0;
+                call erase_laser_on_current_screen(0);
+                call erase_meteors_on_current_screen(0);
+                call PasteBackground(prev_bob_a, prev_x_a, prev_y_a);
+
                 if(player_thrusting != 0)
                 {
                     if(player_firing != 0)
@@ -706,15 +720,12 @@ main:
                     draw_bob = asset_handles[walk_idx];
                 }
 
-                if(prev_x_a != player_x || prev_y_a != player_y || prev_bob_a != draw_bob)
-                {
-                    call PasteBackground(prev_bob_a, prev_x_a, prev_y_a);
-                    call GetBobBackground(draw_bob, player_x, player_y);
-                    call PasteBob(draw_bob, player_x, player_y, 1);
-                    prev_x_a = player_x;
-                    prev_y_a = player_y;
-                    prev_bob_a = draw_bob;
-                }
+                call GetBobBackground(draw_bob, player_x, player_y);
+                call capture_meteors_background_on_current_screen(0);
+                call PasteBob(draw_bob, player_x, player_y, 1);
+                prev_x_a = player_x;
+                prev_y_a = player_y;
+                prev_bob_a = draw_bob;
 
                 call draw_meteors_on_current_screen(0);
                 call draw_laser_on_current_screen(0);
@@ -856,92 +867,93 @@ main:
         }
     }
 
-    // Erase previous BOB positions then redraw all active meteors.
-    // use_b: 1 = writing to screen buffer B, 0 = buffer A.
-    proc draw_meteors_on_current_screen(use_b:byte) -> void {
+    // Erase previous meteor BOBs for current buffer.
+    proc erase_meteors_on_current_screen(use_b:byte) -> void {
         var i:int;
         var bob:int;
         var prev_x:u16;
         var prev_y:u16;
         var prev_valid:int;
-        var cur_x:int;
-        var cur_y:int;
 
         for i = 0 to MAX_METEORS - 1
         {
             if (use_b != 0)
             {
-                bob       = meteor_bobs_b[i];
-                prev_x    = meteor_prev_x_b[i];
-                prev_y    = meteor_prev_y_b[i];
+                bob = meteor_bobs_b[i];
+                prev_x = meteor_prev_x_b[i];
+                prev_y = meteor_prev_y_b[i];
                 prev_valid = meteor_prev_valid_b[i];
             }
             else
             {
-                bob       = meteor_bobs_a[i];
-                prev_x    = meteor_prev_x_a[i];
-                prev_y    = meteor_prev_y_a[i];
+                bob = meteor_bobs_a[i];
+                prev_x = meteor_prev_x_a[i];
+                prev_y = meteor_prev_y_a[i];
                 prev_valid = meteor_prev_valid_a[i];
             }
 
-            // Erase previous position from this buffer
             if (prev_valid != 0)
             {
                 call PasteBackground(bob, prev_x, prev_y);
             }
 
-            if (meteor_active[i] == 0)
-            {
-                if (use_b != 0)
-                {
-                    meteor_prev_x_b[i] = -1;
-                    meteor_prev_y_b[i] = -1;
-                    meteor_prev_valid_b[i] = 0;
-                }
-                else
-                {
-                    meteor_prev_x_a[i] = -1;
-                    meteor_prev_y_a[i] = -1;
-                    meteor_prev_valid_a[i] = 0;
-                }
-                continue;
-            }
+            if (use_b != 0) { meteor_prev_valid_b[i] = 0; }
+            else { meteor_prev_valid_a[i] = 0; }
+        }
+    }
 
-            // Not yet on screen (just spawned at right edge) or past left wall
-            if (meteor_x[i] >= 320 || meteor_x[i] < 0)
-            {
-                if (use_b != 0)
-                {
-                    meteor_prev_x_b[i] = -1;
-                    meteor_prev_y_b[i] = -1;
-                    meteor_prev_valid_b[i] = 0;
-                }
-                else
-                {
-                    meteor_prev_x_a[i] = -1;
-                    meteor_prev_y_a[i] = -1;
-                    meteor_prev_valid_a[i] = 0;
-                }
-                continue;
-            }
+    // Capture backgrounds for active meteors before any dynamic draw.
+    proc capture_meteors_background_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var bob:int;
+        var cur_x:int;
+        var cur_y:int;
+
+        for i = 0 to MAX_METEORS - 1
+        {
+            if (use_b != 0) { bob = meteor_bobs_b[i]; }
+            else { bob = meteor_bobs_a[i]; }
+
+            if (meteor_active[i] == 0) { continue; }
+            if (meteor_x[i] >= 320 || meteor_x[i] < 0) { continue; }
 
             cur_x = meteor_x[i];
             cur_y = meteor_y[i];
-
-            // Draw at current position
             call GetBobBackground(bob, cur_x, cur_y);
+        }
+    }
+
+    // Draw all active meteors for current buffer.
+    proc draw_meteors_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var bob:int;
+        var cur_x:int;
+        var cur_y:int;
+
+        for i = 0 to MAX_METEORS - 1
+        {
+            if (use_b != 0) { bob = meteor_bobs_b[i]; }
+            else { bob = meteor_bobs_a[i]; }
+
+            if (meteor_active[i] == 0) { continue; }
+
+            // Skip off-screen positions.
+            if (meteor_x[i] >= 320 || meteor_x[i] < 0) { continue; }
+
+            cur_x = meteor_x[i];
+            cur_y = meteor_y[i];
             call PasteBob(bob, cur_x, cur_y, 1);
 
             if (use_b != 0)
             {
-                meteor_prev_x_b[i]     = cur_x;
-                meteor_prev_y_b[i]     = cur_y;
+                meteor_prev_x_b[i] = cur_x;
+                meteor_prev_y_b[i] = cur_y;
                 meteor_prev_valid_b[i] = 1;
             }
             else
             {
-                meteor_prev_x_a[i]     = cur_x;
-                meteor_prev_y_a[i]     = cur_y;
+                meteor_prev_x_a[i] = cur_x;
+                meteor_prev_y_a[i] = cur_y;
                 meteor_prev_valid_a[i] = 1;
             }
         }
