@@ -60,6 +60,7 @@ extern var jetpacspritesheet_flyu_003:int;
 extern var jetpacspritesheet_flyu_004:int;
 extern var jetpacspritesheet_fuel:int;
 extern var jetpacspritesheet_meteor:int;
+extern var jetpacspritesheet_meteorr:int;
 extern var jetpacspritesheet_ufo_0002:int;
 extern var jetpacspritesheet_ufo_0003:int;
 extern var jetpacspritesheet_ufo_0004:int;
@@ -89,7 +90,7 @@ const PLAYER_BOB_W_M1 = 16;  // sprite right-edge offset (17 px wide -> last pix
 const PLAYER_BOB_H_M1 = 30;  // sprite bottom-edge offset (31 px tall -> last pixel at +30)
 
 const MAP_WIDTH = 20;
-const MAP_HEIGHT = 10;
+const MAP_HEIGHT = 16;
 const TILE_WIDTH = 16;
 const TILE_HEIGHT = 16;
 
@@ -108,15 +109,15 @@ const LASER_MAX_X = 304;       // right boundary (beam is 16 px wide so max byte
 const LASER_Y_OFFSET = 12;
 const MAX_BEAMS = 4;
 const MAX_METEORS = 7;        // max simultaneous meteor aliens on screen
-const METEOR_SPEED = 2;       // pixels per frame, horizontal left-ward
+const METEOR_SPEED = 2;       // pixels per frame, horizontal either direction
 const METEOR_BOB_W = 48;      // descriptor width of meteor BOB (3x16 chunks)
 const METEOR_BOB_H = 17;      // original pixel height of meteor sprite
 const METEOR_START_X = 272;   // spawn at visible right edge (320 - 48)
 const METEOR_LEFT_START_X = 0; // spawn at visible left edge
 const METEOR_MIN_Y = 16;      // minimum spawn Y (top guard)
-const METEOR_MAX_Y = 239;     // keep BOB fully inside 320x256 display (256 - 17)
+const METEOR_MAX_Y = 176;     // keep BOB fully inside 320x256 display
 const METEOR_SPAWN_Y_RANGE = 224; // [16..239] inclusive
-const METEOR_SPAWN_DELAY = 48; // frames between successive spawns
+const METEOR_SPAWN_DELAY = 18; // frames between successive spawns
 const ALIEN_TYPE_METEOR = 0;  // type index for horizontal meteors (future types: 1, 2 …)
 const METEOR_DIR_LEFT = 0;
 const METEOR_DIR_RIGHT = 1;
@@ -586,7 +587,7 @@ main:
 
     proc init_game() -> int {
         player_x = 160 - 8;
-        player_y = 113;   // feet (y+30) at pixel 143, one pixel above floor row 9 (y=144)
+        player_y = 256-80;
 
         call HeapInit();
 
@@ -769,6 +770,14 @@ main:
             id = CreateBob(&jetpacspritesheet_meteor, 1);
             if (id == -1) { return -1; }
             meteor_bobs_b[i] = id;
+
+            id = CreateBob(&jetpacspritesheet_meteorr, 1);
+            if (id == -1) { return -1; }
+            meteor_bobs_right_a[i] = id;
+
+            id = CreateBob(&jetpacspritesheet_meteorr, 1);
+            if (id == -1) { return -1; }
+            meteor_bobs_right_b[i] = id;
         }
         return 0;
     }
@@ -913,14 +922,16 @@ main:
         {
             if (use_b != 0)
             {
-                bob = meteor_bobs_b[i];
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
+                else { bob = meteor_bobs_b[i]; }
                 prev_x = meteor_prev_x_b[i];
                 prev_y = meteor_prev_y_b[i];
                 prev_valid = meteor_prev_valid_b[i];
             }
             else
             {
-                bob = meteor_bobs_a[i];
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
+                else { bob = meteor_bobs_a[i]; }
                 prev_x = meteor_prev_x_a[i];
                 prev_y = meteor_prev_y_a[i];
                 prev_valid = meteor_prev_valid_a[i];
@@ -947,11 +958,13 @@ main:
         {
             if (use_b != 0)
             {
-                bob = meteor_bobs_b[i];
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
+                else { bob = meteor_bobs_b[i]; }
             }
             else
             {
-                bob = meteor_bobs_a[i];
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
+                else { bob = meteor_bobs_a[i]; }
             }
 
             if (meteor_active[i] == 0) { continue; }
@@ -972,8 +985,16 @@ main:
 
         for i = 0 to MAX_METEORS - 1
         {
-            if (use_b != 0) { bob = meteor_bobs_b[i]; }
-            else { bob = meteor_bobs_a[i]; }
+            if (use_b != 0)
+            {
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
+                else { bob = meteor_bobs_b[i]; }
+            }
+            else
+            {
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
+                else { bob = meteor_bobs_a[i]; }
+            }
 
             if (meteor_active[i] == 0) { continue; }
 
@@ -1238,14 +1259,20 @@ code level_code:
 data data_map1:
     map1.b = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,60,27,27,27,61,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,34,29,29,29,17,0,0,0,0,0,0,12,27,27,27,31,0,0,
+0,0,26,14,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,46,47,0,0,0,0,0,0,0,0,0,14,15,16,21,0,0,0,
+0,0,54,55,0,0,0,0,0,0,0,0,0,34,30,30,17,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,35,36,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,29,13,29,29,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,13,29,28,29,5,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-4,14,14,14,14,14,14,14,13,14,14,14,14,14,14,28,30,14,14,9}
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+29,29,29,29,29,29,37,29,29,29,29,29,29,37,37,29,29,29,29,29}
 
 bss level_bss:
     level_start_x.b: 1
@@ -1315,6 +1342,8 @@ bss meteor_bss:
     meteor_y.l[MAX_METEORS]
     meteor_bobs_a.l[MAX_METEORS]
     meteor_bobs_b.l[MAX_METEORS]
+    meteor_bobs_right_a.l[MAX_METEORS]
+    meteor_bobs_right_b.l[MAX_METEORS]
     meteor_prev_x_a.l[MAX_METEORS]
     meteor_prev_y_a.l[MAX_METEORS]
     meteor_prev_valid_a.l[MAX_METEORS]
