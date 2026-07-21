@@ -36,6 +36,10 @@ else
     ROOT="$SCRIPT_DIR"
 fi
 
+# Detect HAS (High Amiga Assembler) root directory.
+# To use your own path, either:
+#   1. Set the HASC_ROOT environment variable, or
+#   2. Update the candidate paths below to include your installation
 HASC_ROOT_DETECTED="${HASC_ROOT:-}"
 if [[ -z "$HASC_ROOT_DETECTED" ]]; then
     for candidate in \
@@ -147,6 +151,7 @@ LIB_SOURCES=(
     "$LIB_DIR/math.s"
     "$LIB_DIR/bob.s"
     "$LIB_DIR/ptplayer.s"
+    "$LIB_DIR/debug.s"
 )
 
 declare -A SYM_TO_LIB=()
@@ -239,6 +244,7 @@ ORDERED_LIBS=(
     "$LIB_DIR/heap.s"
     "$LIB_DIR/math.s"
     "$LIB_DIR/bob.s"
+    "$LIB_DIR/debug.s"
     "$LIB_DIR/ptplayer.s"
 )
 
