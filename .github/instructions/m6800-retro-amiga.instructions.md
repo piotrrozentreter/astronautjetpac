@@ -19,6 +19,7 @@ applyTo:
 - Preserve existing assembler syntax and directive style already used by the project.
 - Use Context7 documentation lookup when syntax, directives, or integration details are uncertain.
 - For non-trivial routines, include brief comments for register/flag effects and clobbered state.
+- For text or HUD overlays in double-buffered scenes, track per-buffer dirty flags and redraw overlays after restoring the underlying scanline strip to avoid stale glyph artifacts.
 
 ## Output Expectations
 

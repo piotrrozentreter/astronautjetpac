@@ -10,11 +10,11 @@ extern func HeapInit() -> void;
 extern func SetFont(font_ptr:int) -> int;
 extern func Text(x:int, y:int, string:int, color:int) -> int;
 
-extern func DebugSetEnabled(flag:int) -> int;
-extern func DebugClear() -> int;
-extern func DebugLogStr(msg:int) -> int;
-extern func DebugLogInt(value:int) -> int;
-extern func DebugFlushToDos() -> int;
+extern func DebugSetEnabled(flag:int) -> void;
+extern func DebugClear() -> void;
+extern func DebugLogStr(msg:int) -> void;
+extern func DebugLogInt(value:int) -> void;
+extern func DebugFlushToDos() -> void;
 
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
@@ -200,7 +200,7 @@ main:
         var i:int;
 
         // Only create BOBs actually referenced by the render loop.
-        // Slots [0-10], [16-20], [26-41] are reserved for future use (left 0 / null).
+        // Slots [10] and [31-41] are currently left 0 (reserved / null).
         id = CreateBob(&jetpacspritesheet_flyl_000, 1); if (id == -1) { return -1; } asset_handles[11] = id;
         id = CreateBob(&jetpacspritesheet_flyl_001, 1); if (id == -1) { return -1; } asset_handles[12] = id;
         id = CreateBob(&jetpacspritesheet_flyl_002, 1); if (id == -1) { return -1; } asset_handles[13] = id;
@@ -321,10 +321,11 @@ main:
             call DebugLogStr(&dbg_err_meteor_bobs);
             return -1;
         }
-        if(load_explosion_bobs() == -1)
+        call load_explosion_bobs();
+        if(expl_slots_ready <= 0)
         {
+            // Explosions are optional: continue startup without FX slots.
             call DebugLogStr(&dbg_err_expl_bobs);
-            return -1;
         }
 
         return 0;
@@ -833,7 +834,7 @@ main:
             rem = v - (q * 10);
             digit = hud_digit_chars[rem];
             hud_line_text[7 + idx] = digit;
-            v = q & 65535;  // divs.w leaves remainder in high word; strip it
+            v = q;
         }
     }
 
@@ -860,17 +861,20 @@ main:
         }
     }
 
-    // Rebuild HUD only when score changes (or first forced draw), then mark both
+    // Rebuild HUD only when score/lives/high-score changes (or first forced
+    // draw), then mark both
     // buffers dirty so each screen refreshes once on its next render pass.
     proc update_hud_state() -> void {
         var shown_lives:int;
         var lives_digit:byte;
-        var score_changed:byte;
+        var hud_changed:byte;
 
-        score_changed = 0;
-        if(current_score != hud_prev_score) { score_changed = 1; }
-        if(hud_force_redraw != 0) { score_changed = 1; }
-        if(score_changed != 0)
+        hud_changed = 0;
+        if(current_score != hud_prev_score) { hud_changed = 1; }
+        if(high_score != hud_prev_high_score) { hud_changed = 1; }
+        if(current_lives != hud_prev_lives) { hud_changed = 1; }
+        if(hud_force_redraw != 0) { hud_changed = 1; }
+        if(hud_changed != 0)
         {
             call hud_write_score(current_score);
             call hud_write_high(high_score);
@@ -1192,8 +1196,8 @@ main:
         }
     }
 
-    // Explosion BOBs are allocated lazily per slot on first use.
-    // This avoids startup failure from large one-shot allocation bursts.
+    // Explosion BOBs are allocated up-front (up to MAX_EXPLOSIONS), but tolerate
+    // partial allocation and allow gameplay to continue when no slots are ready.
     proc load_explosion_bobs() -> int {
         var i:int;
         var id_a:int;

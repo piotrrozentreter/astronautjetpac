@@ -176,6 +176,18 @@ mapfile -t EXTERN_SYMBOLS < <(
         | sort -u
 )
 
+DEBUG_EXTERN_USED=0
+for sym in "${EXTERN_SYMBOLS[@]}"; do
+    case "$sym" in
+        Debug*) DEBUG_EXTERN_USED=1; break ;;
+    esac
+done
+if [[ $DEBUG_EXTERN_USED -eq 1 && ! -f "$LIB_DIR/debug.s" ]]; then
+    echo "ERROR: $SRC declares Debug* externs, but required library '$LIB_DIR/debug.s' is missing." >&2
+    echo "Install/update highamigaassembler libs to include debug.s, or remove Debug* extern usage from source." >&2
+    exit 1
+fi
+
 declare -A WANT_LIB=()
 for sym in "${EXTERN_SYMBOLS[@]}"; do
     lib="${SYM_TO_LIB[$sym]:-}"
