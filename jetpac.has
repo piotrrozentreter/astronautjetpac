@@ -8,6 +8,12 @@ extern func WaitVBlank() -> void;
 extern func SetColor(index:int, color:int) -> void;
 extern func HeapInit() -> void;
 
+extern func DebugSetEnabled(flag:int) -> int;
+extern func DebugClear() -> int;
+extern func DebugLogStr(msg:int) -> int;
+extern func DebugLogInt(value:int) -> int;
+extern func DebugFlushToDos() -> int;
+
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
 extern func ReadJoystick() -> u32;
@@ -33,6 +39,10 @@ extern var jetpacspritesheet_deadr_002:int;
 extern var jetpacspritesheet_deadr_003:int;
 extern var jetpacspritesheet_deadr_004:int;
 extern var jetpacspritesheet_energy:int;
+extern var jetpacspritesheet_expl_1:int;
+extern var jetpacspritesheet_expl_2:int;
+extern var jetpacspritesheet_expl_3:int;
+extern var jetpacspritesheet_expl_4:int;
 extern var jetpacspritesheet_flyl_000:int;
 extern var jetpacspritesheet_flyl_001:int;
 extern var jetpacspritesheet_flyl_002:int;
@@ -77,6 +87,16 @@ extern var jetpacspritesheet_walkr_002:int;
 extern var jetpacspritesheet_walkr_003:int;
 extern var jetpacspritesheet_walkr_004:int;
 extern var jetpacspritesheet_walkr_005:int;
+extern var jetpacspritesheet_walkfl1:int;
+extern var jetpacspritesheet_walkfl2:int;
+extern var jetpacspritesheet_walkfl3:int;
+extern var jetpacspritesheet_walkfl4:int;
+extern var jetpacspritesheet_walkfl5:int;
+extern var jetpacspritesheet_walkfr1:int;
+extern var jetpacspritesheet_walkfr2:int;
+extern var jetpacspritesheet_walkfr3:int;
+extern var jetpacspritesheet_walkfr4:int;
+extern var jetpacspritesheet_walkfr5:int;
 
 const KEY_ESC = 69;
 const JOY_RIGHT = 2;
@@ -100,29 +120,47 @@ const WALK_ANIM_FRAMES = 6;
 const WALK_ANIM_RATE = 4;
 const FLY_ANIM_FRAMES = 5;
 const FLY_ANIM_RATE = 4;
+const FIRE_STAND_ANIM_FRAMES = 5;
+const FIRE_STAND_ANIM_RATE = 3;
+const FIRE_FLY_ANIM_FRAMES = 5;
+const FIRE_FLY_ANIM_RATE = 3;
 const GRAVITY = 1;
 const THRUST = 3;
 const MAX_VEL_DOWN = 6;
 const LASER_SPEED = 8;
 const LASER_RANGE_STEPS = 40;  // 40 steps x 8 px = 320 px — stops at screen edge
 const LASER_MAX_X = 304;       // right boundary (beam is 16 px wide so max byte-start)
+const LASER_REFILL_INTERVAL = 3; // frames between hold-fire beam spawns
 const LASER_Y_OFFSET = 12;
 const MAX_BEAMS = 4;
 const MAX_METEORS = 7;        // max simultaneous meteor aliens on screen
 const METEOR_SPEED = 2;       // pixels per frame, horizontal either direction
 const METEOR_BOB_W = 48;      // descriptor width of meteor BOB (3x16 chunks)
 const METEOR_BOB_H = 17;      // original pixel height of meteor sprite
+const METEOR_BOB_W_M1 = 47;   // last pixel column of 48px-wide meteor
 const METEOR_START_X = 272;   // spawn at visible right edge (320 - 48)
 const METEOR_LEFT_START_X = 0; // spawn at visible left edge
 const METEOR_MIN_Y = 16;      // minimum spawn Y (top guard)
 const METEOR_MAX_Y = 176;     // keep BOB fully inside 320x256 display
 const METEOR_SPAWN_Y_RANGE = 224; // [16..239] inclusive
-const METEOR_SPAWN_DELAY = 18; // frames between successive spawns
+const METEOR_SPAWN_DELAY = 30; // frames between successive spawns
 const ALIEN_TYPE_METEOR = 0;  // type index for horizontal meteors (future types: 1, 2 …)
+const ALIEN_TYPE_UFO_0002 = 1;
+const ALIEN_TYPE_UFO_0003 = 2;
+const ALIEN_TYPE_UFO_0004 = 3;
+const ALIEN_TYPE_UFO_0005 = 4;
 const METEOR_DIR_LEFT = 0;
 const METEOR_DIR_RIGHT = 1;
+const UFO_VDIR_UP = 0;
+const UFO_VDIR_DOWN = 1;
+const UFO_VERT_SPEED = 1;
+const MAX_EXPLOSIONS = 2;            // 2 slots x 8 BOBs = 16 BOBs; keep small to fit heap
+const EXPLOSION_ANIM_FRAMES = 4;     // expl_1 .. expl_4
+const EXPLOSION_ANIM_RATE = 3;       // frames per explosion cel
+const EXPLOSION_MAX_X = 304;         // 16x16 sprite in 320-wide display
+const EXPLOSION_MAX_Y = 240;         // 16x16 sprite in 256-high display
 
-const MAX_LEVELS = 1;
+const MAX_LEVELS = 5;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -140,7 +178,9 @@ code main:
 main:
         jsr TakeSystem
         jsr game_start
-        jmp ReleaseSystem
+        jsr ReleaseSystem
+        jsr DebugFlushToDos
+        rts
     }
 
     native proc peek_w(__reg(a0) a: long) -> int {
@@ -167,6 +207,16 @@ main:
         id = CreateBob(&jetpacspritesheet_flyr_002, 1); if (id == -1) { return -1; } asset_handles[23] = id;
         id = CreateBob(&jetpacspritesheet_flyr_003, 1); if (id == -1) { return -1; } asset_handles[24] = id;
         id = CreateBob(&jetpacspritesheet_flyr_004, 1); if (id == -1) { return -1; } asset_handles[25] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_000, 1); if (id == -1) { return -1; } asset_handles[16] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_001, 1); if (id == -1) { return -1; } asset_handles[17] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_002, 1); if (id == -1) { return -1; } asset_handles[18] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_003, 1); if (id == -1) { return -1; } asset_handles[19] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_004, 1); if (id == -1) { return -1; } asset_handles[20] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_000, 1); if (id == -1) { return -1; } asset_handles[26] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_001, 1); if (id == -1) { return -1; } asset_handles[27] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_002, 1); if (id == -1) { return -1; } asset_handles[28] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_003, 1); if (id == -1) { return -1; } asset_handles[29] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } asset_handles[30] = id;
         id = CreateBob(&jetpacspritesheet_walkl_000, 1); if (id == -1) { return -1; } asset_handles[42] = id;
         id = CreateBob(&jetpacspritesheet_walkl_001, 1); if (id == -1) { return -1; } asset_handles[43] = id;
         id = CreateBob(&jetpacspritesheet_walkl_002, 1); if (id == -1) { return -1; } asset_handles[44] = id;
@@ -179,6 +229,18 @@ main:
         id = CreateBob(&jetpacspritesheet_walkr_003, 1); if (id == -1) { return -1; } asset_handles[51] = id;
         id = CreateBob(&jetpacspritesheet_walkr_004, 1); if (id == -1) { return -1; } asset_handles[52] = id;
         id = CreateBob(&jetpacspritesheet_walkr_005, 1); if (id == -1) { return -1; } asset_handles[53] = id;
+
+        // Standing fire sequence frames (A-screen path uses asset_handles[0..9]).
+        id = CreateBob(&jetpacspritesheet_walkfl1, 1); if (id == -1) { return -1; } asset_handles[0] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl2, 1); if (id == -1) { return -1; } asset_handles[1] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl3, 1); if (id == -1) { return -1; } asset_handles[2] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl4, 1); if (id == -1) { return -1; } asset_handles[3] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl5, 1); if (id == -1) { return -1; } asset_handles[4] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr1, 1); if (id == -1) { return -1; } asset_handles[5] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr2, 1); if (id == -1) { return -1; } asset_handles[6] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr3, 1); if (id == -1) { return -1; } asset_handles[7] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr4, 1); if (id == -1) { return -1; } asset_handles[8] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr5, 1); if (id == -1) { return -1; } asset_handles[9] = id;
 
         player_bob_left = asset_handles[42];
         player_bob_right = asset_handles[48];
@@ -197,6 +259,18 @@ main:
         id = CreateBob(&jetpacspritesheet_walkr_004, 1); if (id == -1) { return -1; } walk_right_bobs_b[4] = id;
         id = CreateBob(&jetpacspritesheet_walkr_005, 1); if (id == -1) { return -1; } walk_right_bobs_b[5] = id;
 
+        id = CreateBob(&jetpacspritesheet_walkfl1, 1); if (id == -1) { return -1; } fire_stand_left_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl2, 1); if (id == -1) { return -1; } fire_stand_left_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl3, 1); if (id == -1) { return -1; } fire_stand_left_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl4, 1); if (id == -1) { return -1; } fire_stand_left_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_walkfl5, 1); if (id == -1) { return -1; } fire_stand_left_bobs_b[4] = id;
+
+        id = CreateBob(&jetpacspritesheet_walkfr1, 1); if (id == -1) { return -1; } fire_stand_right_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr2, 1); if (id == -1) { return -1; } fire_stand_right_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr3, 1); if (id == -1) { return -1; } fire_stand_right_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr4, 1); if (id == -1) { return -1; } fire_stand_right_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_walkfr5, 1); if (id == -1) { return -1; } fire_stand_right_bobs_b[4] = id;
+
         player_bob_left_b = walk_left_bobs_b[0];
         player_bob_right_b = walk_right_bobs_b[0];
 
@@ -212,6 +286,18 @@ main:
         id = CreateBob(&jetpacspritesheet_flyr_003, 1); if (id == -1) { return -1; } fly_right_bobs_b[3] = id;
         id = CreateBob(&jetpacspritesheet_flyr_004, 1); if (id == -1) { return -1; } fly_right_bobs_b[4] = id;
 
+        id = CreateBob(&jetpacspritesheet_flylf_000, 1); if (id == -1) { return -1; } fire_fly_left_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_001, 1); if (id == -1) { return -1; } fire_fly_left_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_002, 1); if (id == -1) { return -1; } fire_fly_left_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_003, 1); if (id == -1) { return -1; } fire_fly_left_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_flylf_004, 1); if (id == -1) { return -1; } fire_fly_left_bobs_b[4] = id;
+
+        id = CreateBob(&jetpacspritesheet_flyrf_000, 1); if (id == -1) { return -1; } fire_fly_right_bobs_b[0] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_001, 1); if (id == -1) { return -1; } fire_fly_right_bobs_b[1] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_002, 1); if (id == -1) { return -1; } fire_fly_right_bobs_b[2] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_003, 1); if (id == -1) { return -1; } fire_fly_right_bobs_b[3] = id;
+        id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } fire_fly_right_bobs_b[4] = id;
+
         // Fire-pose BOBs: one frozen last-frame BOB per direction per screen buffer.
         id = CreateBob(&jetpacspritesheet_flylf_004, 1); if (id == -1) { return -1; } fire_bob_left_a = id;
         id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } fire_bob_right_a = id;
@@ -226,7 +312,16 @@ main:
             call SetColor(i, peek_w(pal + (i << 1)));
         }
 
-        if(load_meteor_bobs() == -1) { return -1; }
+        if(load_meteor_bobs() == -1)
+        {
+            call DebugLogStr(&dbg_err_meteor_bobs);
+            return -1;
+        }
+        if(load_explosion_bobs() == -1)
+        {
+            call DebugLogStr(&dbg_err_expl_bobs);
+            return -1;
+        }
 
         return 0;
     }
@@ -234,6 +329,7 @@ main:
     proc update_player() -> void {
         var joy:u32;
         var is_walking:byte;
+        var fire_btn:byte;
         var new_x:int;
         var new_y:int;
         var x_ok:u8;
@@ -315,33 +411,151 @@ main:
             fly_timer = 0;
         }
 
-        // Fire: only permitted while thrusting (airborne with jetpack on).
-        // On shelf (not thrusting) firing is disallowed and state is cleared.
-        // Single frozen-frame BOBs are used so no fly_frame locking is needed.
+        fire_btn = 0;
+        if(ReadJoystickFire() != 0) { fire_btn = 1; }
+
+        // Fire state machine:
+        // mode 1 = standing fire (idle only), mode 2 = flying fire.
         player_firing = 0;
-        if(player_thrusting != 0)
+        player_fire_mode = 0;
+
+        if(fire_btn != 0)
         {
-            if(ReadJoystickFire() != 0)
+            if(player_thrusting != 0)
             {
                 player_firing = 1;
+                player_fire_mode = 2;
             }
+            else if(is_walking == 0)
+            {
+                player_firing = 1;
+                player_fire_mode = 1;
+            }
+        }
+
+        if(player_fire_mode == 1)
+        {
+            fire_stand_timer = fire_stand_timer + 1;
+            if(fire_stand_timer >= FIRE_STAND_ANIM_RATE)
+            {
+                fire_stand_timer = 0;
+                if(fire_stand_frame < (FIRE_STAND_ANIM_FRAMES - 1))
+                {
+                    fire_stand_frame = fire_stand_frame + 1;
+                }
+            }
+
+            fire_fly_frame = 0;
+            fire_fly_timer = 0;
+
+            if(fire_stand_frame >= (FIRE_STAND_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
+            else { player_fire_ready = 0; }
+        }
+        else if(player_fire_mode == 2)
+        {
+            fire_fly_timer = fire_fly_timer + 1;
+            if(fire_fly_timer >= FIRE_FLY_ANIM_RATE)
+            {
+                fire_fly_timer = 0;
+                if(fire_fly_frame < (FIRE_FLY_ANIM_FRAMES - 1))
+                {
+                    fire_fly_frame = fire_fly_frame + 1;
+                }
+            }
+
+            fire_stand_frame = 0;
+            fire_stand_timer = 0;
+
+            if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
+            else { player_fire_ready = 0; }
+        }
+        else
+        {
+            fire_stand_frame = 0;
+            fire_stand_timer = 0;
+            fire_fly_frame = 0;
+            fire_fly_timer = 0;
+            player_fire_ready = 0;
         }
     }
 
     // Up to MAX_BEAMS simultaneous horizontal laser beams, byte-aligned planar writes.
+    // Returns 1 if beam slot hit and removed one alien this frame.
+    proc laser_hit_alien(beam_slot:int) -> byte {
+        var i:int;
+        var beam_left:int;
+        var beam_right:int;
+        var beam_y_pos:int;
+        var alien_left:int;
+        var alien_right:int;
+        var alien_top:int;
+        var alien_bottom:int;
+        var alien_h:int;
+        var lvl:int;
+        var add_pts:int;
+
+        beam_left = beam_x[beam_slot];
+        beam_right = beam_left + 15;
+        beam_y_pos = beam_y[beam_slot];
+
+        for i = 0 to MAX_METEORS - 1
+        {
+            if(meteor_active[i] == 0) { continue; }
+
+            alien_h = METEOR_BOB_H;
+            if(meteor_type[i] == ALIEN_TYPE_UFO_0002) { alien_h = 26; }
+            else if(meteor_type[i] == ALIEN_TYPE_UFO_0003) { alien_h = 27; }
+            else if(meteor_type[i] == ALIEN_TYPE_UFO_0004) { alien_h = 25; }
+            else if(meteor_type[i] == ALIEN_TYPE_UFO_0005) { alien_h = 29; }
+
+            alien_left = meteor_x[i];
+            alien_right = alien_left + METEOR_BOB_W_M1;
+            alien_top = meteor_y[i];
+            alien_bottom = alien_top + alien_h - 1;
+
+            if(beam_right < alien_left) { continue; }
+            if(beam_left > alien_right) { continue; }
+            if(beam_y_pos < alien_top) { continue; }
+            if(beam_y_pos > alien_bottom) { continue; }
+
+            // Hit: despawn alien, spawn explosion and instantly free beam slot.
+            call spawn_explosion(meteor_x[i], meteor_y[i]);
+            meteor_active[i] = 0;
+            meteor_spawn_timer = 0;
+            beam_active[beam_slot] = 0;
+
+            lvl = current_level;
+            if(lvl < 1 || lvl > MAX_LEVELS) { lvl = 1; }
+            add_pts = 10 * lvl;
+            current_score = current_score + add_pts;
+            if(current_score > high_score) { high_score = current_score; }
+
+            return 1;
+        }
+
+        return 0;
+    }
+
     proc update_laser() -> void {
         var i:int;
         var idx:int;
         var found:byte;
+        var spawned:byte;
         var spawn_x:int;
         var spawn_y:int;
         var next_x:int;
         var head_x:int;
 
-        // Rising-edge fire: find first free slot and spawn.
-        if(player_firing != 0)
+        if(laser_refill_timer > 0)
         {
-            if(laser_fire_prev == 0)
+            laser_refill_timer = laser_refill_timer - 1;
+        }
+
+        // Hold-to-refill fire: while fire is held at ready state, keep spawning
+        // into the first free slot until MAX_BEAMS are active.
+        if(player_fire_ready != 0)
+        {
+            if(laser_refill_timer == 0)
             {
                 found = 0;
                 idx = 0;
@@ -353,6 +567,7 @@ main:
                     }
                 }
 
+                spawned = 0;
                 if(found != 0)
                 {
                     if(player_face_right != 0)
@@ -384,12 +599,16 @@ main:
                         beam_timer[idx] = LASER_RANGE_STEPS;
                         beam_color_phase[idx] = 0;
                         beam_active[idx] = 1;
+                        spawned = 1;
                     }
+                }
+
+                if(spawned != 0)
+                {
+                    laser_refill_timer = LASER_REFILL_INTERVAL;
                 }
             }
         }
-
-        laser_fire_prev = player_firing;
 
         // Advance all active beams.
         for i = 0 to MAX_BEAMS - 1
@@ -419,6 +638,11 @@ main:
             }
 
             beam_x[i] = next_x;
+
+            if(laser_hit_alien(i) != 0)
+            {
+                continue;
+            }
 
             if(beam_timer[i] > 0)
             {
@@ -589,20 +813,26 @@ main:
         player_x = 160 - 8;
         player_y = 256-80;
 
+        call DebugSetEnabled(1);
+        call DebugClear();
+
         call HeapInit();
 
         if(SetGraphicsMode(0) == -1)
         {
+            call DebugLogStr(&dbg_err_setgfx);
             return -1;
         }
 
         if(load_all_assets() == -1)
         {
+            call DebugLogStr(&dbg_err_load_assets);
             return -1;
         }
 
-        call CreateMap(1);
+        call CreateMap(current_level);
         call init_meteors();
+        call init_explosions();
         level_dirty = 1;
         call RefreshLevelBuffersIfDirty();
 
@@ -657,20 +887,23 @@ main:
             call update_player();
             call update_laser();
             call update_meteors();
+            call update_explosions();
 
             if(screen == 0)
             {
                 screen = 1;
                 call erase_laser_on_current_screen(1);
                 call erase_meteors_on_current_screen(1);
+                call erase_explosions_on_current_screen(1);
                 call PasteBackground(prev_bob_b, prev_x_b, prev_y_b);
 
                 if(player_thrusting != 0)
                 {
-                    if(player_firing != 0)
+                    if(player_fire_mode == 2)
                     {
-                        if(player_face_right == 1) { draw_bob = fire_bob_right_b; }
-                        else { draw_bob = fire_bob_left_b; }
+                        walk_idx = fire_fly_frame;
+                        if(player_face_right == 1) { draw_bob = fire_fly_right_bobs_b[walk_idx]; }
+                        else { draw_bob = fire_fly_left_bobs_b[walk_idx]; }
                     }
                     else
                     {
@@ -681,19 +914,30 @@ main:
                 }
                 else
                 {
-                    walk_idx = walk_frame;
-                    if(player_face_right == 1) { draw_bob = walk_right_bobs_b[walk_idx]; }
-                    else { draw_bob = walk_left_bobs_b[walk_idx]; }
+                    if(player_fire_mode == 1)
+                    {
+                        walk_idx = fire_stand_frame;
+                        if(player_face_right == 1) { draw_bob = fire_stand_right_bobs_b[walk_idx]; }
+                        else { draw_bob = fire_stand_left_bobs_b[walk_idx]; }
+                    }
+                    else
+                    {
+                        walk_idx = walk_frame;
+                        if(player_face_right == 1) { draw_bob = walk_right_bobs_b[walk_idx]; }
+                        else { draw_bob = walk_left_bobs_b[walk_idx]; }
+                    }
                 }
 
                 call GetBobBackground(draw_bob, player_x, player_y);
                 call capture_meteors_background_on_current_screen(1);
+                call capture_explosions_background_on_current_screen(1);
                 call PasteBob(draw_bob, player_x, player_y, 1);
                 prev_x_b = player_x;
                 prev_y_b = player_y;
                 prev_bob_b = draw_bob;
 
                 call draw_meteors_on_current_screen(1);
+                call draw_explosions_on_current_screen(1);
                 call draw_laser_on_current_screen(1);
             }
             else
@@ -701,37 +945,48 @@ main:
                 screen = 0;
                 call erase_laser_on_current_screen(0);
                 call erase_meteors_on_current_screen(0);
+                call erase_explosions_on_current_screen(0);
                 call PasteBackground(prev_bob_a, prev_x_a, prev_y_a);
 
                 if(player_thrusting != 0)
                 {
-                    if(player_firing != 0)
+                    if(player_fire_mode == 2)
                     {
-                        if(player_face_right == 1) { draw_bob = fire_bob_right_a; }
-                        else { draw_bob = fire_bob_left_a; }
+                        if(player_face_right == 1) { walk_idx = 26 + fire_fly_frame; }
+                        else { walk_idx = 16 + fire_fly_frame; }
                     }
                     else
                     {
                         if(player_face_right == 1) { walk_idx = 21 + fly_frame; }
                         else { walk_idx = 11 + fly_frame; }
-                        draw_bob = asset_handles[walk_idx];
                     }
+                    draw_bob = asset_handles[walk_idx];
                 }
                 else
                 {
-                    if(player_face_right == 1) { walk_idx = 48 + walk_frame; }
-                    else { walk_idx = 42 + walk_frame; }
+                    if(player_fire_mode == 1)
+                    {
+                        if(player_face_right == 1) { walk_idx = 5 + fire_stand_frame; }
+                        else { walk_idx = 0 + fire_stand_frame; }
+                    }
+                    else
+                    {
+                        if(player_face_right == 1) { walk_idx = 48 + walk_frame; }
+                        else { walk_idx = 42 + walk_frame; }
+                    }
                     draw_bob = asset_handles[walk_idx];
                 }
 
                 call GetBobBackground(draw_bob, player_x, player_y);
                 call capture_meteors_background_on_current_screen(0);
+                call capture_explosions_background_on_current_screen(0);
                 call PasteBob(draw_bob, player_x, player_y, 1);
                 prev_x_a = player_x;
                 prev_y_a = player_y;
                 prev_bob_a = draw_bob;
 
                 call draw_meteors_on_current_screen(0);
+                call draw_explosions_on_current_screen(0);
                 call draw_laser_on_current_screen(0);
             }
 
@@ -763,22 +1018,107 @@ main:
         var id:int;
         for i = 0 to MAX_METEORS - 1
         {
-            id = CreateBob(&jetpacspritesheet_meteor, 1);
+            id = CreateBob(&jetpacspritesheet_ufo_0005, 1);
             if (id == -1) { return -1; }
             meteor_bobs_a[i] = id;
 
-            id = CreateBob(&jetpacspritesheet_meteor, 1);
+            id = CreateBob(&jetpacspritesheet_ufo_0005, 1);
             if (id == -1) { return -1; }
             meteor_bobs_b[i] = id;
 
-            id = CreateBob(&jetpacspritesheet_meteorr, 1);
+            id = CreateBob(&jetpacspritesheet_ufo_0005, 1);
             if (id == -1) { return -1; }
             meteor_bobs_right_a[i] = id;
 
-            id = CreateBob(&jetpacspritesheet_meteorr, 1);
+            id = CreateBob(&jetpacspritesheet_ufo_0005, 1);
             if (id == -1) { return -1; }
             meteor_bobs_right_b[i] = id;
         }
+        return 0;
+    }
+
+    // Patch alien BOB runtime struct to the descriptor for the current level type.
+    proc patch_alien_bob(bob:int, alien_type:int, dir:int) -> void {
+        var desc:int;
+
+        if (alien_type == ALIEN_TYPE_METEOR)
+        {
+            if (dir == METEOR_DIR_RIGHT) { desc = &jetpacspritesheet_meteorr; }
+            else                         { desc = &jetpacspritesheet_meteor; }
+        }
+        else if (alien_type == ALIEN_TYPE_UFO_0002)
+        {
+            desc = &jetpacspritesheet_ufo_0002;
+        }
+        else if (alien_type == ALIEN_TYPE_UFO_0003)
+        {
+            desc = &jetpacspritesheet_ufo_0003;
+        }
+        else if (alien_type == ALIEN_TYPE_UFO_0004)
+        {
+            desc = &jetpacspritesheet_ufo_0004;
+        }
+        else
+        {
+            desc = &jetpacspritesheet_ufo_0005;
+        }
+
+        asm {
+            move.l @bob,a0
+            move.l @desc,a1
+            move.l (a1),(a0)
+            move.l 4(a1),4(a0)
+            move.w 14(a1),20(a0)
+        }
+    }
+
+    // Explosion BOBs are allocated lazily per slot on first use.
+    // This avoids startup failure from large one-shot allocation bursts.
+    proc load_explosion_bobs() -> int {
+        var i:int;
+        var id_a:int;
+        var id_b:int;
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            expl_bobs_a[i] = 0;
+            expl_bobs_b[i] = 0;
+        }
+
+        // Allocate 2 BOBs per slot (one per screen buffer), using the largest frame
+        // (expl_4, 32 rows) to size the background save buffer.  Before each
+        // GetBobBackground / PasteBob call, patch_expl_bob() rewrites data_ptr,
+        // mask_ptr and height in the runtime struct for the current animation frame.
+        expl_slots_ready = 0;
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            id_a = CreateBob(&jetpacspritesheet_expl_4, 1);
+            if (id_a == -1)
+            {
+                call DebugLogStr(&dbg_err_expl_alloc_a);
+                call DebugLogInt(i);
+                break;
+            }
+
+            id_b = CreateBob(&jetpacspritesheet_expl_4, 1);
+            if (id_b == -1)
+            {
+                call DebugLogStr(&dbg_err_expl_alloc_b);
+                call DebugLogInt(i);
+                call DestroyBob(id_a);
+                break;
+            }
+
+            expl_bobs_a[i] = id_a;
+            expl_bobs_b[i] = id_b;
+            expl_slots_ready = expl_slots_ready + 1;
+        }
+
+        return 0;
+    }
+
+    // Ensure one slot has its BOBs allocated.
+    proc ensure_explosion_slot_bobs(slot:int) -> byte {
+        if (slot < expl_slots_ready) { return 1; }
         return 0;
     }
 
@@ -790,10 +1130,74 @@ main:
             meteor_active[i] = 0;
             meteor_type[i] = ALIEN_TYPE_METEOR;
             meteor_dir[i] = METEOR_DIR_LEFT;
+            meteor_vdir[i] = UFO_VDIR_DOWN;
+            meteor_vtimer[i] = 0;
             meteor_prev_valid_a[i] = 0;
             meteor_prev_valid_b[i] = 0;
+            meteor_prev_dir_a[i] = METEOR_DIR_LEFT;
+            meteor_prev_dir_b[i] = METEOR_DIR_LEFT;
         }
         meteor_spawn_timer = 0;
+    }
+
+    proc init_explosions() -> void {
+        var i:int;
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            expl_active[i] = 0;
+            expl_frame[i] = 0;
+            expl_timer[i] = 0;
+            expl_prev_valid_a[i] = 0;
+            expl_prev_valid_b[i] = 0;
+        }
+    }
+
+    // Spawns only when a fully-clean slot exists (both buffers already erased).
+    proc spawn_explosion(x:int, y:int) -> void {
+        var i:int;
+
+        if (expl_slots_ready <= 0) { return; }
+
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            if (expl_active[i] != 0) { continue; }
+            if (expl_prev_valid_a[i] != 0) { continue; }
+            if (expl_prev_valid_b[i] != 0) { continue; }
+            if (ensure_explosion_slot_bobs(i) == 0) { continue; }
+
+            expl_x[i] = x;
+            expl_y[i] = y;
+            expl_frame[i] = 0;
+            expl_timer[i] = 0;
+            expl_prev_x_a[i] = -1;
+            expl_prev_y_a[i] = -1;
+            expl_prev_valid_a[i] = 0;
+            expl_prev_x_b[i] = -1;
+            expl_prev_y_b[i] = -1;
+            expl_prev_valid_b[i] = 0;
+            expl_active[i] = 1;
+            return;
+        }
+    }
+
+    // One-shot explosion sequence: expl_1 -> expl_4, then deactivate.
+    proc update_explosions() -> void {
+        var i:int;
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            if (expl_active[i] == 0) { continue; }
+
+            expl_timer[i] = expl_timer[i] + 1;
+            if (expl_timer[i] >= EXPLOSION_ANIM_RATE)
+            {
+                expl_timer[i] = 0;
+                expl_frame[i] = expl_frame[i] + 1;
+                if (expl_frame[i] >= EXPLOSION_ANIM_FRAMES)
+                {
+                    expl_active[i] = 0;
+                }
+            }
+        }
     }
 
     // Spawn and move meteors each frame.
@@ -804,10 +1208,24 @@ main:
         var count:int;
         var found:byte;
         var idx:int;
+        var stage:int;
+        var alien_type:int;
         var rand_y:int;
         var rv:int;
+        var next_x:int;
+        var next_y:int;
+        var probe_x:int;
+        var probe_y:int;
+        var probe_y_top:int;
+        var probe_y_mid:int;
+        var probe_y_bot:int;
+        var bob_h:int;
+        var solid_hit:byte;
 
         if (meteor_spawn_timer > 0) { meteor_spawn_timer = meteor_spawn_timer - 1; }
+
+        stage = current_level;
+        if (stage < 1 || stage > MAX_LEVELS) { stage = 1; }
 
         // Count active meteors and record the first fully-clean free slot.
         // A slot is only safe to reuse once both screen buffers have erased
@@ -857,13 +1275,18 @@ main:
                         meteor_x[idx] = METEOR_START_X;
                     }
                     meteor_y[idx] = rand_y;
-                    meteor_type[idx] = ALIEN_TYPE_METEOR;
+                    meteor_type[idx] = stage - 1;
+                    meteor_vdir[idx] = UFO_VDIR_DOWN;
+                    if ((rv & 512) != 0) { meteor_vdir[idx] = UFO_VDIR_UP; }
+                    meteor_vtimer[idx] = 8 + ((rv >> 10) & 7);
                     meteor_prev_x_a[idx] = -1;
                     meteor_prev_y_a[idx] = -1;
                     meteor_prev_valid_a[idx] = 0;
+                    meteor_prev_dir_a[idx] = meteor_dir[idx];
                     meteor_prev_x_b[idx] = -1;
                     meteor_prev_y_b[idx] = -1;
                     meteor_prev_valid_b[idx] = 0;
+                    meteor_prev_dir_b[idx] = meteor_dir[idx];
                     meteor_active[idx] = 1;
                     meteor_spawn_timer = METEOR_SPAWN_DELAY;
                 }
@@ -875,39 +1298,399 @@ main:
         {
             if (meteor_active[i] == 0) { continue; }
 
-            if (meteor_type[i] == ALIEN_TYPE_METEOR)
+            alien_type = meteor_type[i];
+            bob_h = METEOR_BOB_H;
+            if (alien_type == ALIEN_TYPE_UFO_0002) { bob_h = 26; }
+            else if (alien_type == ALIEN_TYPE_UFO_0003) { bob_h = 27; }
+            else if (alien_type == ALIEN_TYPE_UFO_0004) { bob_h = 25; }
+            else if (alien_type == ALIEN_TYPE_UFO_0005) { bob_h = 29; }
+
+            next_x = meteor_x[i];
+            next_y = meteor_y[i];
+            solid_hit = 0;
+
+            if (meteor_dir[i] == METEOR_DIR_RIGHT) { next_x = next_x + METEOR_SPEED; }
+            else                                    { next_x = next_x - METEOR_SPEED; }
+
+            if (meteor_dir[i] == METEOR_DIR_RIGHT) { probe_x = next_x + METEOR_BOB_W_M1; }
+            else                                    { probe_x = next_x; }
+
+            if (alien_type == ALIEN_TYPE_METEOR)
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT)
+                if (next_x > METEOR_START_X || next_x < 0)
                 {
-                    meteor_x[i] = meteor_x[i] + METEOR_SPEED;
-                }
-                else
-                {
-                    meteor_x[i] = meteor_x[i] - METEOR_SPEED;
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
                 }
 
-                // Destroy when leading edge crosses the screen wall.
-                // Reset the spawn timer so a replacement appears immediately
-                // after the erase cycle completes (2 buffer frames).
-                if (meteor_dir[i] == METEOR_DIR_RIGHT)
+                probe_y_top = next_y + 1;
+                probe_y_mid = next_y + (bob_h >> 1);
+                probe_y_bot = next_y + bob_h - 1;
+
+                if (IsPositionWalkable(probe_x, probe_y_top, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_mid, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_bot, 0) == 0)
                 {
-                    // Do not allow partial off-screen right blits: x must stay <= 288.
-                    if (meteor_x[i] > METEOR_START_X)
-                    {
-                        meteor_active[i] = 0;
-                        meteor_spawn_timer = 0;
-                    }
+                    call spawn_explosion(next_x, next_y);
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                meteor_x[i] = next_x;
+            }
+            else if (alien_type == ALIEN_TYPE_UFO_0002)
+            {
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED; }
+                else                                  { next_y = next_y - UFO_VERT_SPEED; }
+
+                if (next_x > METEOR_START_X || next_x < 0)
+                {
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                if (next_y <= METEOR_MIN_Y)
+                {
+                    next_y = METEOR_MIN_Y;
+                    meteor_vdir[i] = UFO_VDIR_DOWN;
+                }
+                else if (next_y >= METEOR_MAX_Y)
+                {
+                    next_y = METEOR_MAX_Y;
+                    meteor_vdir[i] = UFO_VDIR_UP;
+                }
+
+                probe_y_top = next_y + 1;
+                probe_y_mid = next_y + (bob_h >> 1);
+                probe_y_bot = next_y + bob_h - 1;
+
+                if (IsPositionWalkable(probe_x, probe_y_top, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_mid, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_bot, 0) == 0)
+                {
+                    call spawn_explosion(next_x, next_y);
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                probe_y = next_y;
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { probe_y = next_y + bob_h - 1; }
+                if (IsPositionWalkable(next_x + (METEOR_BOB_W >> 1), probe_y, 0) == 0)
+                {
+                    call spawn_explosion(next_x, next_y);
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                meteor_x[i] = next_x;
+                meteor_y[i] = next_y;
+            }
+            else if (alien_type == ALIEN_TYPE_UFO_0003)
+            {
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED; }
+                else                                  { next_y = next_y - UFO_VERT_SPEED; }
+
+                if (next_x > METEOR_START_X || next_x < 0)
+                {
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                if (next_y <= METEOR_MIN_Y)
+                {
+                    next_y = METEOR_MIN_Y;
+                    meteor_vdir[i] = UFO_VDIR_DOWN;
+                }
+                else if (next_y >= METEOR_MAX_Y)
+                {
+                    next_y = METEOR_MAX_Y;
+                    meteor_vdir[i] = UFO_VDIR_UP;
+                }
+
+                probe_y_top = next_y + 1;
+                probe_y_mid = next_y + (bob_h >> 1);
+                probe_y_bot = next_y + bob_h - 1;
+
+                if (IsPositionWalkable(probe_x, probe_y_top, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_mid, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_bot, 0) == 0)
+                {
+                    solid_hit = 1;
+                }
+
+                probe_y = next_y;
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { probe_y = next_y + bob_h - 1; }
+                if (IsPositionWalkable(next_x + (METEOR_BOB_W >> 1), probe_y, 0) == 0)
+                {
+                    if (meteor_vdir[i] == UFO_VDIR_DOWN) { meteor_vdir[i] = UFO_VDIR_UP; }
+                    else                                  { meteor_vdir[i] = UFO_VDIR_DOWN; }
+                    next_y = meteor_y[i];
+                }
+
+                if (solid_hit != 0)
+                {
+                    if (meteor_dir[i] == METEOR_DIR_RIGHT) { meteor_dir[i] = METEOR_DIR_LEFT; }
+                    else                                    { meteor_dir[i] = METEOR_DIR_RIGHT; }
                 }
                 else
                 {
-                    if (meteor_x[i] < 0)
+                    meteor_x[i] = next_x;
+                }
+
+                meteor_y[i] = next_y;
+            }
+            else if (alien_type == ALIEN_TYPE_UFO_0004)
+            {
+                next_x = meteor_x[i];
+                next_y = meteor_y[i];
+
+                if (player_x > meteor_x[i])
+                {
+                    next_x = next_x + METEOR_SPEED;
+                    meteor_dir[i] = METEOR_DIR_RIGHT;
+                }
+                else if (player_x < meteor_x[i])
+                {
+                    next_x = next_x - METEOR_SPEED;
+                    meteor_dir[i] = METEOR_DIR_LEFT;
+                }
+
+                if (player_y > meteor_y[i]) { next_y = next_y + UFO_VERT_SPEED; }
+                else if (player_y < meteor_y[i]) { next_y = next_y - UFO_VERT_SPEED; }
+
+                if (next_x > METEOR_START_X || next_x < 0)
+                {
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                if (next_y <= METEOR_MIN_Y) { next_y = METEOR_MIN_Y; }
+                if (next_y >= METEOR_MAX_Y) { next_y = METEOR_MAX_Y; }
+
+                if (meteor_dir[i] == METEOR_DIR_RIGHT) { probe_x = next_x + METEOR_BOB_W_M1; }
+                else                                    { probe_x = next_x; }
+                probe_y_top = next_y + 1;
+                probe_y_mid = next_y + (bob_h >> 1);
+                probe_y_bot = next_y + bob_h - 1;
+
+                if (IsPositionWalkable(probe_x, probe_y_top, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_mid, 0) == 0 ||
+                    IsPositionWalkable(probe_x, probe_y_bot, 0) == 0)
+                {
+                    call spawn_explosion(next_x, next_y);
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                probe_y = next_y;
+                if (player_y >= meteor_y[i]) { probe_y = next_y + bob_h - 1; }
+                if (IsPositionWalkable(next_x + (METEOR_BOB_W >> 1), probe_y, 0) == 0)
+                {
+                    call spawn_explosion(next_x, next_y);
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                    continue;
+                }
+
+                meteor_x[i] = next_x;
+                meteor_y[i] = next_y;
+            }
+            else
+            {
+                if (meteor_vtimer[i] > 0) { meteor_vtimer[i] = meteor_vtimer[i] - 1; }
+                if (meteor_vtimer[i] == 0)
+                {
+                    rv = prng_next();
+                    if ((rv & 256) != 0)
                     {
-                        meteor_active[i] = 0;
-                        meteor_spawn_timer = 0;
+                        if (meteor_dir[i] == METEOR_DIR_RIGHT) { meteor_dir[i] = METEOR_DIR_LEFT; }
+                        else                                    { meteor_dir[i] = METEOR_DIR_RIGHT; }
                     }
+                    if ((rv & 512) != 0) { meteor_vdir[i] = UFO_VDIR_UP; }
+                    else                 { meteor_vdir[i] = UFO_VDIR_DOWN; }
+                    meteor_vtimer[i] = 6 + ((rv >> 10) & 15);
+                }
+
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED; }
+                else                                  { next_y = next_y - UFO_VERT_SPEED; }
+
+                if (next_y <= METEOR_MIN_Y)
+                {
+                    next_y = METEOR_MIN_Y;
+                    meteor_vdir[i] = UFO_VDIR_DOWN;
+                }
+                else if (next_y >= METEOR_MAX_Y)
+                {
+                    next_y = METEOR_MAX_Y;
+                    meteor_vdir[i] = UFO_VDIR_UP;
+                }
+
+                meteor_x[i] = next_x;
+                meteor_y[i] = next_y;
+            }
+
+            // Destroy when leading edge crosses the screen wall.
+            // Reset spawn timer so replacement appears right after erase cycle.
+            if (meteor_dir[i] == METEOR_DIR_RIGHT)
+            {
+                if (meteor_x[i] > METEOR_START_X)
+                {
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
+                }
+            }
+            else
+            {
+                if (meteor_x[i] < 0)
+                {
+                    meteor_active[i] = 0;
+                    meteor_spawn_timer = 0;
                 }
             }
         }
+    }
+
+    // Patches a BOB runtime struct to display the given explosion frame (0..3).
+    // Call this before GetBobBackground and PasteBob for the current frame.
+    // Do NOT call before PasteBackground — the stored height must match the capture.
+    //
+    // BOB runtime struct layout (from bob.s):
+    //   +0:  data_ptr  (long)
+    //   +4:  mask_ptr  (long)
+    //   +8:  bg_ptr    (long)
+    //   +12: palette_ptr (long)
+    //   +16: has_background_flag (word)
+    //   +18: width     (word)
+    //   +20: height    (word)
+    //
+    // BOB descriptor layout (&jetpacspritesheet_expl_N):
+    //   +0:  data_ptr  (long)
+    //   +4:  mask_ptr  (long)
+    //   +8:  palette_ptr (long)
+    //   +12: width     (word)
+    //   +14: height    (word)
+    //   +16: color_count (word)
+    proc patch_expl_bob(bob:int, frame:int) -> void {
+        var desc:int;
+        if (frame == 0)      { desc = &jetpacspritesheet_expl_1; }
+        else if (frame == 1) { desc = &jetpacspritesheet_expl_2; }
+        else if (frame == 2) { desc = &jetpacspritesheet_expl_3; }
+        else                 { desc = &jetpacspritesheet_expl_4; }
+        asm {
+            move.l @bob,a0           ; a0 = BOB runtime struct
+            move.l @desc,a1          ; a1 = frame descriptor
+            move.l (a1),(a0)         ; patch data_ptr  at +0
+            move.l 4(a1),4(a0)      ; patch mask_ptr  at +4
+            move.w 14(a1),20(a0)    ; patch height    at +20 (descriptor +14 -> struct +20)
+        }
+    }
+
+    // Erase previous explosion BOBs for current buffer.
+    proc erase_explosions_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var bob:int;
+        var prev_x:u16;
+        var prev_y:u16;
+        var prev_valid:int;
+
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            if (use_b != 0)
+            {
+                bob = expl_bobs_b[i];
+                prev_x = expl_prev_x_b[i];
+                prev_y = expl_prev_y_b[i];
+                prev_valid = expl_prev_valid_b[i];
+            }
+            else
+            {
+                bob = expl_bobs_a[i];
+                prev_x = expl_prev_x_a[i];
+                prev_y = expl_prev_y_a[i];
+                prev_valid = expl_prev_valid_a[i];
+            }
+
+            if (prev_valid != 0)
+            {
+                call PasteBackground(bob, prev_x, prev_y);
+            }
+
+            if (use_b != 0) { expl_prev_valid_b[i] = 0; }
+            else { expl_prev_valid_a[i] = 0; }
+        }
+    }
+
+    // Capture background for current explosion frame before dynamic draw.
+    proc capture_explosions_background_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var bob:int;
+        var cur_x:int;
+        var cur_y:int;
+        var frame:int;
+
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            if (expl_active[i] == 0) { continue; }
+
+            cur_x = expl_x[i];
+            cur_y = expl_y[i];
+            if (cur_x < 0 || cur_x > EXPLOSION_MAX_X) { continue; }
+            if (cur_y < 0 || cur_y > EXPLOSION_MAX_Y) { continue; }
+
+            frame = expl_frame[i];
+            if (use_b != 0) { bob = expl_bobs_b[i]; }
+            else            { bob = expl_bobs_a[i]; }
+
+            call patch_expl_bob(bob, frame);
+            call GetBobBackground(bob, cur_x, cur_y);
+        }
+    }
+
+    // Draw active explosions and remember position for next-buffer erase.
+    // patch_expl_bob() was already called in capture; runtime struct height
+    // is correct for the current frame — PasteBob draws it immediately.
+    proc draw_explosions_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var bob:int;
+        var cur_x:int;
+        var cur_y:int;
+
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            if (expl_active[i] == 0) { continue; }
+
+            cur_x = expl_x[i];
+            cur_y = expl_y[i];
+            if (cur_x < 0 || cur_x > EXPLOSION_MAX_X) { continue; }
+            if (cur_y < 0 || cur_y > EXPLOSION_MAX_Y) { continue; }
+
+            if (use_b != 0) { bob = expl_bobs_b[i]; }
+            else            { bob = expl_bobs_a[i]; }
+
+            call PasteBob(bob, cur_x, cur_y, 1);
+
+            if (use_b != 0)
+            {
+                expl_prev_x_b[i] = cur_x;
+                expl_prev_y_b[i] = cur_y;
+                expl_prev_valid_b[i] = 1;
+            }
+            else
+            {
+                expl_prev_x_a[i] = cur_x;
+                expl_prev_y_a[i] = cur_y;
+                expl_prev_valid_a[i] = 1;
+            }
+        }
+
     }
 
     // Erase previous meteor BOBs for current buffer.
@@ -922,7 +1705,7 @@ main:
         {
             if (use_b != 0)
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
+                if (meteor_type[i] == ALIEN_TYPE_METEOR && meteor_prev_dir_b[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
                 else { bob = meteor_bobs_b[i]; }
                 prev_x = meteor_prev_x_b[i];
                 prev_y = meteor_prev_y_b[i];
@@ -930,7 +1713,7 @@ main:
             }
             else
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
+                if (meteor_type[i] == ALIEN_TYPE_METEOR && meteor_prev_dir_a[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
                 else { bob = meteor_bobs_a[i]; }
                 prev_x = meteor_prev_x_a[i];
                 prev_y = meteor_prev_y_a[i];
@@ -939,6 +1722,8 @@ main:
 
             if (prev_valid != 0)
             {
+                if (use_b != 0) { call patch_alien_bob(bob, meteor_type[i], meteor_prev_dir_b[i]); }
+                else            { call patch_alien_bob(bob, meteor_type[i], meteor_prev_dir_a[i]); }
                 call PasteBackground(bob, prev_x, prev_y);
             }
 
@@ -958,12 +1743,12 @@ main:
         {
             if (use_b != 0)
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
+                if (meteor_type[i] == ALIEN_TYPE_METEOR && meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
                 else { bob = meteor_bobs_b[i]; }
             }
             else
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
+                if (meteor_type[i] == ALIEN_TYPE_METEOR && meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
                 else { bob = meteor_bobs_a[i]; }
             }
 
@@ -972,6 +1757,7 @@ main:
 
             cur_x = meteor_x[i];
             cur_y = meteor_y[i];
+            call patch_alien_bob(bob, meteor_type[i], meteor_dir[i]);
             call GetBobBackground(bob, cur_x, cur_y);
         }
     }
@@ -987,12 +1773,12 @@ main:
         {
             if (use_b != 0)
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
+                if (meteor_type[i] == ALIEN_TYPE_METEOR && meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_b[i]; }
                 else { bob = meteor_bobs_b[i]; }
             }
             else
             {
-                if (meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
+                if (meteor_type[i] == ALIEN_TYPE_METEOR && meteor_dir[i] == METEOR_DIR_RIGHT) { bob = meteor_bobs_right_a[i]; }
                 else { bob = meteor_bobs_a[i]; }
             }
 
@@ -1003,6 +1789,7 @@ main:
 
             cur_x = meteor_x[i];
             cur_y = meteor_y[i];
+            call patch_alien_bob(bob, meteor_type[i], meteor_dir[i]);
             call PasteBob(bob, cur_x, cur_y, 1);
 
             if (use_b != 0)
@@ -1010,12 +1797,14 @@ main:
                 meteor_prev_x_b[i] = cur_x;
                 meteor_prev_y_b[i] = cur_y;
                 meteor_prev_valid_b[i] = 1;
+                meteor_prev_dir_b[i] = meteor_dir[i];
             }
             else
             {
                 meteor_prev_x_a[i] = cur_x;
                 meteor_prev_y_a[i] = cur_y;
                 meteor_prev_valid_a[i] = 1;
+                meteor_prev_dir_a[i] = meteor_dir[i];
             }
         }
     }
@@ -1078,6 +1867,13 @@ code level_code:
             level_start_x = 13; // Example start position for level 1
             level_start_y = 5;
         }
+        else if (level <= MAX_LEVELS)
+        {
+            // Additional levels currently reuse map1 terrain; alien logic changes by level.
+            map_data = &map1;
+            level_start_x = 13;
+            level_start_y = 5;
+        }
         else
         {
             // Default to map1 if level not recognized
@@ -1085,6 +1881,9 @@ code level_code:
             level_start_x = 13; // Example start position for level 1
             level_start_y = 5;
         }
+
+        current_level = level;
+        if (current_level < 1 || current_level > MAX_LEVELS) { current_level = 1; }
 
         // Load global into typed local for array access
         map_ptr = map_data;
@@ -1296,16 +2095,30 @@ data main_data:
     fly_frame.b = 0
     fly_timer.b = 0
     player_firing.b = 0
+    player_fire_mode.b = 0
+    player_fire_ready.b = 0
+    laser_refill_timer.b = 0
+    fire_stand_frame.b = 0
+    fire_stand_timer.b = 0
+    fire_fly_frame.b = 0
+    fire_fly_timer.b = 0
     fire_bob_left_a.l = 0
     fire_bob_right_a.l = 0
     fire_bob_left_b.l = 0
     fire_bob_right_b.l = 0
     laser_fire_prev.b = 0
+    current_level.b = 1
+    current_score.l = 0
+    high_score.l = 0
 
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]
     walk_left_bobs_b.l[6]
     walk_right_bobs_b.l[6]
+    fire_stand_left_bobs_b.l[5]
+    fire_stand_right_bobs_b.l[5]
+    fire_fly_left_bobs_b.l[5]
+    fire_fly_right_bobs_b.l[5]
     fly_left_bobs_b.l[5]
     fly_right_bobs_b.l[5]
 
@@ -1327,6 +2140,14 @@ bss laser_bss:
 // meteor_spawn_timer: counts down to 0, then one new meteor is spawned.
 // prng_seed:          Galois-LFSR state; pre-initialised to a non-zero value.
 
+data debug_strings:
+    dbg_err_setgfx.b      = "[ERR] SetGraphicsMode failed", 0
+    dbg_err_load_assets.b = "[ERR] load_all_assets failed", 0
+    dbg_err_meteor_bobs.b = "[ERR] load_meteor_bobs failed", 0
+    dbg_err_expl_bobs.b   = "[ERR] load_explosion_bobs failed", 0
+    dbg_err_expl_alloc_a.b = "[ERR] expl CreateBob A failed at slot", 0
+    dbg_err_expl_alloc_b.b = "[ERR] expl CreateBob B failed at slot", 0
+
 data meteor_data:
     meteor_spawn_timer.w = 0
     prng_seed.l = $A5F3C1E7
@@ -1338,6 +2159,8 @@ bss meteor_bss:
     meteor_active.l[MAX_METEORS]
     meteor_type.l[MAX_METEORS]    // widened to .l to keep subsequent arrays long-word aligned
     meteor_dir.l[MAX_METEORS]
+    meteor_vdir.l[MAX_METEORS]
+    meteor_vtimer.l[MAX_METEORS]
     meteor_x.l[MAX_METEORS]
     meteor_y.l[MAX_METEORS]
     meteor_bobs_a.l[MAX_METEORS]
@@ -1350,3 +2173,21 @@ bss meteor_bss:
     meteor_prev_x_b.l[MAX_METEORS]
     meteor_prev_y_b.l[MAX_METEORS]
     meteor_prev_valid_b.l[MAX_METEORS]
+    meteor_prev_dir_a.l[MAX_METEORS]
+    meteor_prev_dir_b.l[MAX_METEORS]
+
+bss explosion_bss:
+    expl_slots_ready.l: 1
+    expl_active.l[MAX_EXPLOSIONS]
+    expl_x.l[MAX_EXPLOSIONS]
+    expl_y.l[MAX_EXPLOSIONS]
+    expl_frame.l[MAX_EXPLOSIONS]
+    expl_timer.l[MAX_EXPLOSIONS]
+    expl_prev_x_a.l[MAX_EXPLOSIONS]
+    expl_prev_y_a.l[MAX_EXPLOSIONS]
+    expl_prev_valid_a.l[MAX_EXPLOSIONS]
+    expl_prev_x_b.l[MAX_EXPLOSIONS]
+    expl_prev_y_b.l[MAX_EXPLOSIONS]
+    expl_prev_valid_b.l[MAX_EXPLOSIONS]
+    expl_bobs_a.l[MAX_EXPLOSIONS]
+    expl_bobs_b.l[MAX_EXPLOSIONS]
