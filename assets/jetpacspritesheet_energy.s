@@ -7,36 +7,36 @@
 	XDEF	jetpacspritesheet_energy, jetpacspritesheet_energy_data, jetpacspritesheet_energy_mask, jetpacspritesheet_energy_palette
 jetpacspritesheet_energy_palette:
 	DC.W	$000	; color 0
-	DC.W	$DDD	; color 1
-	DC.W	$BCB	; color 2
-	DC.W	$ED5	; color 3
-	DC.W	$BEA	; color 4
-	DC.W	$ACD	; color 5
-	DC.W	$7D7	; color 6
-	DC.W	$BBA	; color 7
-	DC.W	$EA9	; color 8
-	DC.W	$FA2	; color 9
-	DC.W	$E93	; color 10
-	DC.W	$B99	; color 11
-	DC.W	$9AA	; color 12
-	DC.W	$D72	; color 13
-	DC.W	$977	; color 14
-	DC.W	$888	; color 15
-	DC.W	$788	; color 16
-	DC.W	$677	; color 17
-	DC.W	$E54	; color 18
-	DC.W	$C53	; color 19
-	DC.W	$A32	; color 20
-	DC.W	$955	; color 21
-	DC.W	$E21	; color 22
-	DC.W	$A11	; color 23
-	DC.W	$645	; color 24
-	DC.W	$534	; color 25
-	DC.W	$455	; color 26
-	DC.W	$234	; color 27
-	DC.W	$423	; color 28
-	DC.W	$313	; color 29
-	DC.W	$FFE	; color 30
+	DC.W	$EFE	; color 1
+	DC.W	$FF5	; color 2
+	DC.W	$CCC	; color 3
+	DC.W	$ECC	; color 4
+	DC.W	$FC3	; color 5
+	DC.W	$EB9	; color 6
+	DC.W	$FA3	; color 7
+	DC.W	$6EC	; color 8
+	DC.W	$ABB	; color 9
+	DC.W	$A99	; color 10
+	DC.W	$8AB	; color 11
+	DC.W	$4A4	; color 12
+	DC.W	$F83	; color 13
+	DC.W	$D85	; color 14
+	DC.W	$D71	; color 15
+	DC.W	$D52	; color 16
+	DC.W	$889	; color 17
+	DC.W	$965	; color 18
+	DC.W	$688	; color 19
+	DC.W	$677	; color 20
+	DC.W	$E21	; color 21
+	DC.W	$A11	; color 22
+	DC.W	$932	; color 23
+	DC.W	$952	; color 24
+	DC.W	$755	; color 25
+	DC.W	$432	; color 26
+	DC.W	$455	; color 27
+	DC.W	$236	; color 28
+	DC.W	$233	; color 29
+	DC.W	$000	; color 30
 	DC.W	$000	; color 31
 
 jetpacspritesheet_energy_data:
@@ -72,103 +72,103 @@ jetpacspritesheet_energy_data:
 	DC.W	%0000000000000000	; y=1 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=1 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=1 pl=4 chunk=2
-	DC.W	%0000001000011000	; y=2 pl=0 chunk=0
+	DC.W	%0000011000011100	; y=2 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=2 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=2 pl=0 chunk=2
-	DC.W	%0000010000000100	; y=2 pl=1 chunk=0
+	DC.W	%0000000000011100	; y=2 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=2 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=2 pl=1 chunk=2
 	DC.W	%0000000000000000	; y=2 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=2 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=2 pl=2 chunk=2
-	DC.W	%0000000000000000	; y=2 pl=3 chunk=0
+	DC.W	%0000010000000000	; y=2 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=2 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=2 pl=3 chunk=2
 	DC.W	%0000000000000000	; y=2 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=2 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=2 pl=4 chunk=2
-	DC.W	%0000001011010110	; y=3 pl=0 chunk=0
+	DC.W	%0001110111110110	; y=3 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=0 chunk=2
-	DC.W	%0001010100000000	; y=3 pl=1 chunk=0
+	DC.W	%0001110111110100	; y=3 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=1 chunk=2
-	DC.W	%0000101010100000	; y=3 pl=2 chunk=0
+	DC.W	%0000000000000001	; y=3 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=2 chunk=2
-	DC.W	%0001001100000000	; y=3 pl=3 chunk=0
+	DC.W	%0001000100000000	; y=3 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=3 chunk=2
-	DC.W	%0001001100010001	; y=3 pl=4 chunk=0
+	DC.W	%0001000100010001	; y=3 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=4 chunk=2
-	DC.W	%0001111111011000	; y=4 pl=0 chunk=0
+	DC.W	%0011111010101101	; y=4 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=4 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=0 chunk=2
-	DC.W	%0010000101000001	; y=4 pl=1 chunk=0
-	DC.W	%1000000000000000	; y=4 pl=1 chunk=1
+	DC.W	%0001011000001101	; y=4 pl=1 chunk=0
+	DC.W	%0000000000000000	; y=4 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=1 chunk=2
-	DC.W	%0001101010011100	; y=4 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=4 pl=2 chunk=1
+	DC.W	%0000100110100000	; y=4 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=4 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=2 chunk=2
-	DC.W	%0000100111010001	; y=4 pl=3 chunk=0
-	DC.W	%1000000000000000	; y=4 pl=3 chunk=1
+	DC.W	%0010100110101001	; y=4 pl=3 chunk=0
+	DC.W	%0000000000000000	; y=4 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=3 chunk=2
-	DC.W	%0000100111010001	; y=4 pl=4 chunk=0
-	DC.W	%0000000000000000	; y=4 pl=4 chunk=1
+	DC.W	%0000100110100001	; y=4 pl=4 chunk=0
+	DC.W	%1000000000000000	; y=4 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=4 chunk=2
-	DC.W	%0000100010110111	; y=5 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=5 pl=0 chunk=1
+	DC.W	%0011100111110110	; y=5 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=5 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=5 pl=0 chunk=2
-	DC.W	%0011000001010100	; y=5 pl=1 chunk=0
+	DC.W	%0011100110110010	; y=5 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=5 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=5 pl=1 chunk=2
-	DC.W	%0000000110110000	; y=5 pl=2 chunk=0
+	DC.W	%0000000000000101	; y=5 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=5 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=5 pl=2 chunk=2
-	DC.W	%0000000100010100	; y=5 pl=3 chunk=0
+	DC.W	%0000000101010100	; y=5 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=5 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=5 pl=3 chunk=2
 	DC.W	%0000000000000111	; y=5 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=5 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=5 pl=4 chunk=2
-	DC.W	%0001011111111111	; y=6 pl=0 chunk=0
+	DC.W	%0001111100111000	; y=6 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=6 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=6 pl=0 chunk=2
-	DC.W	%0000010111110000	; y=6 pl=1 chunk=0
+	DC.W	%0000111000001000	; y=6 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=6 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=6 pl=1 chunk=2
-	DC.W	%0001110000001000	; y=6 pl=2 chunk=0
+	DC.W	%0000000111110111	; y=6 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=6 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=6 pl=2 chunk=2
-	DC.W	%0000010111110000	; y=6 pl=3 chunk=0
+	DC.W	%0001010111110000	; y=6 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=6 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=6 pl=3 chunk=2
 	DC.W	%0000000111110111	; y=6 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=6 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=6 pl=4 chunk=2
-	DC.W	%0000011101100100	; y=7 pl=0 chunk=0
-	DC.W	%1000000000000000	; y=7 pl=0 chunk=1
+	DC.W	%0010111111111000	; y=7 pl=0 chunk=0
+	DC.W	%0000000000000000	; y=7 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=0 chunk=2
-	DC.W	%0010000000001000	; y=7 pl=1 chunk=0
+	DC.W	%0010011110111000	; y=7 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=1 chunk=2
-	DC.W	%0000011010010000	; y=7 pl=2 chunk=0
+	DC.W	%0000100000000100	; y=7 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=7 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=2 chunk=2
-	DC.W	%0010000000000000	; y=7 pl=3 chunk=0
+	DC.W	%0010110001000000	; y=7 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=3 chunk=2
-	DC.W	%0010000000000100	; y=7 pl=4 chunk=0
+	DC.W	%0010100000000100	; y=7 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=4 chunk=2
-	DC.W	%0001001100011001	; y=8 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=8 pl=0 chunk=1
+	DC.W	%0011101000010011	; y=8 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=8 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=8 pl=0 chunk=2
-	DC.W	%0011101100001011	; y=8 pl=1 chunk=0
+	DC.W	%0010100000000010	; y=8 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=8 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=8 pl=1 chunk=2
-	DC.W	%0000000000010000	; y=8 pl=2 chunk=0
+	DC.W	%0001001100011001	; y=8 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=8 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=8 pl=2 chunk=2
 	DC.W	%0011101100011011	; y=8 pl=3 chunk=0
@@ -177,196 +177,196 @@ jetpacspritesheet_energy_data:
 	DC.W	%0011101100011011	; y=8 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=8 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=8 pl=4 chunk=2
-	DC.W	%0001011100011111	; y=9 pl=0 chunk=0
+	DC.W	%0001100001010001	; y=9 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=0 chunk=2
-	DC.W	%0001110101010001	; y=9 pl=1 chunk=0
+	DC.W	%0000100101000000	; y=9 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=1 chunk=2
-	DC.W	%0000000100010100	; y=9 pl=2 chunk=0
+	DC.W	%0001011000001011	; y=9 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=2 chunk=2
-	DC.W	%0001110101000101	; y=9 pl=3 chunk=0
+	DC.W	%0001110101010001	; y=9 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=3 chunk=2
-	DC.W	%0001111001001111	; y=9 pl=4 chunk=0
+	DC.W	%0001111001001011	; y=9 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=4 chunk=2
-	DC.W	%0000011100111110	; y=10 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=10 pl=0 chunk=1
+	DC.W	%0010111101111100	; y=10 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=10 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=10 pl=0 chunk=2
-	DC.W	%0000110001110100	; y=10 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=10 pl=1 chunk=1
+	DC.W	%0010100101001000	; y=10 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=10 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=10 pl=1 chunk=2
-	DC.W	%0000001000011000	; y=10 pl=2 chunk=0
+	DC.W	%0000010000100110	; y=10 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=10 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=10 pl=2 chunk=2
-	DC.W	%0000110001100100	; y=10 pl=3 chunk=0
+	DC.W	%0000111001110100	; y=10 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=10 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=10 pl=3 chunk=2
 	DC.W	%0010110001100110	; y=10 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=10 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=10 pl=4 chunk=2
-	DC.W	%0001110101000101	; y=11 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=11 pl=0 chunk=1
+	DC.W	%0010011100111010	; y=11 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=11 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=0 chunk=2
-	DC.W	%0001111000000111	; y=11 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=11 pl=1 chunk=1
+	DC.W	%0010001100001010	; y=11 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=11 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=1 chunk=2
-	DC.W	%0000000101010000	; y=11 pl=2 chunk=0
+	DC.W	%0001010000100101	; y=11 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=11 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=2 chunk=2
-	DC.W	%0001110001010111	; y=11 pl=3 chunk=0
+	DC.W	%0001010000100111	; y=11 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=11 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=3 chunk=2
-	DC.W	%0011110001001111	; y=11 pl=4 chunk=0
+	DC.W	%0011010000111111	; y=11 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=11 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=4 chunk=2
-	DC.W	%0001011111101111	; y=12 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=12 pl=0 chunk=1
+	DC.W	%0010111011100010	; y=12 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=12 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=12 pl=0 chunk=2
-	DC.W	%0001001100011111	; y=12 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=12 pl=1 chunk=1
+	DC.W	%0010000001100110	; y=12 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=12 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=12 pl=1 chunk=2
-	DC.W	%0010111011100010	; y=12 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=12 pl=2 chunk=1
+	DC.W	%0001010100011001	; y=12 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=12 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=12 pl=2 chunk=2
-	DC.W	%0001110100011101	; y=12 pl=3 chunk=0
+	DC.W	%0001111110011101	; y=12 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=12 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=12 pl=3 chunk=2
 	DC.W	%0001010100011101	; y=12 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=12 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=12 pl=4 chunk=2
-	DC.W	%0011011101111111	; y=13 pl=0 chunk=0
+	DC.W	%0010001011111110	; y=13 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=13 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=0 chunk=2
-	DC.W	%0001000100010001	; y=13 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=13 pl=1 chunk=1
+	DC.W	%0000101000111100	; y=13 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=13 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=1 chunk=2
-	DC.W	%0000111011101010	; y=13 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=13 pl=2 chunk=1
+	DC.W	%0001000100000001	; y=13 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=13 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=2 chunk=2
-	DC.W	%0001110100010101	; y=13 pl=3 chunk=0
+	DC.W	%0001100111110111	; y=13 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=13 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=3 chunk=2
-	DC.W	%0001010100010101	; y=13 pl=4 chunk=0
+	DC.W	%0001000100010101	; y=13 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=13 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=4 chunk=2
-	DC.W	%0001011011001111	; y=14 pl=0 chunk=0
+	DC.W	%0010011011101110	; y=14 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=14 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=14 pl=0 chunk=2
-	DC.W	%0011010100010111	; y=14 pl=1 chunk=0
+	DC.W	%0000101001101000	; y=14 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=14 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=14 pl=1 chunk=2
-	DC.W	%0010101011100010	; y=14 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=14 pl=2 chunk=1
+	DC.W	%0001010100010101	; y=14 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=14 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=14 pl=2 chunk=2
-	DC.W	%0011110100110101	; y=14 pl=3 chunk=0
-	DC.W	%0000000000000000	; y=14 pl=3 chunk=1
+	DC.W	%0001110110110111	; y=14 pl=3 chunk=0
+	DC.W	%1000000000000000	; y=14 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=14 pl=3 chunk=2
-	DC.W	%0011010100010101	; y=14 pl=4 chunk=0
+	DC.W	%0001010100010101	; y=14 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=14 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=14 pl=4 chunk=2
-	DC.W	%0011110110111111	; y=15 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=15 pl=0 chunk=1
+	DC.W	%0010011011111110	; y=15 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=15 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=15 pl=0 chunk=2
-	DC.W	%0001100100010001	; y=15 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=15 pl=1 chunk=1
+	DC.W	%0010101000111010	; y=15 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=15 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=15 pl=1 chunk=2
-	DC.W	%0000111011101010	; y=15 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=15 pl=2 chunk=1
+	DC.W	%0001010100000101	; y=15 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=15 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=15 pl=2 chunk=2
-	DC.W	%0001010100010101	; y=15 pl=3 chunk=0
+	DC.W	%0001110111110101	; y=15 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=15 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=15 pl=3 chunk=2
 	DC.W	%0001010100010101	; y=15 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=15 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=15 pl=4 chunk=2
-	DC.W	%0001011011001111	; y=16 pl=0 chunk=0
+	DC.W	%0010111011101111	; y=16 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=16 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=16 pl=0 chunk=2
-	DC.W	%0001010100010111	; y=16 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=16 pl=1 chunk=1
+	DC.W	%0010001001101100	; y=16 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=16 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=16 pl=1 chunk=2
-	DC.W	%0010101011101010	; y=16 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=16 pl=2 chunk=1
+	DC.W	%0001010100010001	; y=16 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=16 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=16 pl=2 chunk=2
-	DC.W	%0001110100110101	; y=16 pl=3 chunk=0
+	DC.W	%0001110110110111	; y=16 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=16 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=16 pl=3 chunk=2
 	DC.W	%0001010100010101	; y=16 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=16 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=16 pl=4 chunk=2
-	DC.W	%0011111101101111	; y=17 pl=0 chunk=0
+	DC.W	%0011111011111110	; y=17 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=17 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=17 pl=0 chunk=2
-	DC.W	%0001100100010011	; y=17 pl=1 chunk=0
-	DC.W	%0000000000000000	; y=17 pl=1 chunk=1
+	DC.W	%0000101011111000	; y=17 pl=1 chunk=0
+	DC.W	%1000000000000000	; y=17 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=17 pl=1 chunk=2
-	DC.W	%0000111011101010	; y=17 pl=2 chunk=0
-	DC.W	%1000000000000000	; y=17 pl=2 chunk=1
+	DC.W	%0001010100000101	; y=17 pl=2 chunk=0
+	DC.W	%0000000000000000	; y=17 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=17 pl=2 chunk=2
-	DC.W	%0001010100010101	; y=17 pl=3 chunk=0
+	DC.W	%0001110100010111	; y=17 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=17 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=17 pl=3 chunk=2
 	DC.W	%0001010100010101	; y=17 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=17 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=17 pl=4 chunk=2
-	DC.W	%0001011110111111	; y=18 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=18 pl=0 chunk=1
+	DC.W	%0011011011101010	; y=18 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=18 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=0 chunk=2
-	DC.W	%0011000100010111	; y=18 pl=1 chunk=0
+	DC.W	%0010100001001010	; y=18 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=1 chunk=2
-	DC.W	%0000111001100010	; y=18 pl=2 chunk=0
+	DC.W	%0001010100010100	; y=18 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=18 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=2 chunk=2
-	DC.W	%0011110100010101	; y=18 pl=3 chunk=0
+	DC.W	%0011111110110100	; y=18 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=3 chunk=2
-	DC.W	%0011010100010101	; y=18 pl=4 chunk=0
+	DC.W	%0011010100010100	; y=18 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=4 chunk=2
-	DC.W	%0000100100000111	; y=19 pl=0 chunk=0
+	DC.W	%0010101100011111	; y=19 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=19 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=19 pl=0 chunk=2
-	DC.W	%0010100000001111	; y=19 pl=1 chunk=0
-	DC.W	%1000000000000000	; y=19 pl=1 chunk=1
+	DC.W	%0010001100010100	; y=19 pl=1 chunk=0
+	DC.W	%0000000000000000	; y=19 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=19 pl=1 chunk=2
-	DC.W	%0000101100010010	; y=19 pl=2 chunk=0
-	DC.W	%0000000000000000	; y=19 pl=2 chunk=1
+	DC.W	%0000000000000001	; y=19 pl=2 chunk=0
+	DC.W	%1000000000000000	; y=19 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=19 pl=2 chunk=2
-	DC.W	%0010000000000101	; y=19 pl=3 chunk=0
+	DC.W	%0010100000001111	; y=19 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=19 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=19 pl=3 chunk=2
 	DC.W	%0010000000000101	; y=19 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=19 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=19 pl=4 chunk=2
-	DC.W	%0001010001111011	; y=20 pl=0 chunk=0
-	DC.W	%0000000000000000	; y=20 pl=0 chunk=1
+	DC.W	%0011111100010110	; y=20 pl=0 chunk=0
+	DC.W	%1000000000000000	; y=20 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=0 chunk=2
-	DC.W	%0011011101001110	; y=20 pl=1 chunk=0
+	DC.W	%0010101100010010	; y=20 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=1 chunk=2
-	DC.W	%0000100000100011	; y=20 pl=2 chunk=0
+	DC.W	%0001010001001100	; y=20 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=20 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=2 chunk=2
-	DC.W	%0011111001101101	; y=20 pl=3 chunk=0
+	DC.W	%0011111001001100	; y=20 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=3 chunk=2
-	DC.W	%0011011001101101	; y=20 pl=4 chunk=0
+	DC.W	%0011011001001100	; y=20 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=4 chunk=2
-	DC.W	%0000111101001100	; y=21 pl=0 chunk=0
+	DC.W	%0000111100011110	; y=21 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=21 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=21 pl=0 chunk=2
-	DC.W	%0000100001000100	; y=21 pl=1 chunk=0
+	DC.W	%0000001100000000	; y=21 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=21 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=21 pl=1 chunk=2
-	DC.W	%0000110100010010	; y=21 pl=2 chunk=0
+	DC.W	%0000010001000100	; y=21 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=21 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=21 pl=2 chunk=2
-	DC.W	%0000010001000110	; y=21 pl=3 chunk=0
+	DC.W	%0000110001001110	; y=21 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=21 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=21 pl=3 chunk=2
 	DC.W	%0000010001000100	; y=21 pl=4 chunk=0
@@ -466,34 +466,34 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0000011000011100	; y=2 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=2 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=2 pl=4 chunk=2
-	DC.W	%0001111111110111	; y=3 pl=0 chunk=0
+	DC.W	%0001110111110111	; y=3 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=0 chunk=2
-	DC.W	%0001111111110111	; y=3 pl=1 chunk=0
+	DC.W	%0001110111110111	; y=3 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=1 chunk=2
-	DC.W	%0001111111110111	; y=3 pl=2 chunk=0
+	DC.W	%0001110111110111	; y=3 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=2 chunk=2
-	DC.W	%0001111111110111	; y=3 pl=3 chunk=0
+	DC.W	%0001110111110111	; y=3 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=3 chunk=2
-	DC.W	%0001111111110111	; y=3 pl=4 chunk=0
+	DC.W	%0001110111110111	; y=3 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=3 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=3 pl=4 chunk=2
-	DC.W	%0011111111011101	; y=4 pl=0 chunk=0
+	DC.W	%0011111110101101	; y=4 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=4 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=0 chunk=2
-	DC.W	%0011111111011101	; y=4 pl=1 chunk=0
+	DC.W	%0011111110101101	; y=4 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=4 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=1 chunk=2
-	DC.W	%0011111111011101	; y=4 pl=2 chunk=0
+	DC.W	%0011111110101101	; y=4 pl=2 chunk=0
 	DC.W	%1000000000000000	; y=4 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=2 chunk=2
-	DC.W	%0011111111011101	; y=4 pl=3 chunk=0
+	DC.W	%0011111110101101	; y=4 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=4 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=3 chunk=2
-	DC.W	%0011111111011101	; y=4 pl=4 chunk=0
+	DC.W	%0011111110101101	; y=4 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=4 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=4 pl=4 chunk=2
 	DC.W	%0011100111110111	; y=5 pl=0 chunk=0
@@ -526,19 +526,19 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0001111111111111	; y=6 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=6 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=6 pl=4 chunk=2
-	DC.W	%0010011111111100	; y=7 pl=0 chunk=0
+	DC.W	%0010111111111100	; y=7 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=0 chunk=2
-	DC.W	%0010011111111100	; y=7 pl=1 chunk=0
+	DC.W	%0010111111111100	; y=7 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=1 chunk=2
-	DC.W	%0010011111111100	; y=7 pl=2 chunk=0
+	DC.W	%0010111111111100	; y=7 pl=2 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=2 chunk=2
-	DC.W	%0010011111111100	; y=7 pl=3 chunk=0
+	DC.W	%0010111111111100	; y=7 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=3 chunk=2
-	DC.W	%0010011111111100	; y=7 pl=4 chunk=0
+	DC.W	%0010111111111100	; y=7 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=7 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=7 pl=4 chunk=2
 	DC.W	%0011101100011011	; y=8 pl=0 chunk=0
@@ -556,19 +556,19 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0011101100011011	; y=8 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=8 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=8 pl=4 chunk=2
-	DC.W	%0001111101011111	; y=9 pl=0 chunk=0
+	DC.W	%0001111101011011	; y=9 pl=0 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=0 chunk=2
-	DC.W	%0001111101011111	; y=9 pl=1 chunk=0
+	DC.W	%0001111101011011	; y=9 pl=1 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=1 chunk=2
-	DC.W	%0001111101011111	; y=9 pl=2 chunk=0
+	DC.W	%0001111101011011	; y=9 pl=2 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=2 chunk=2
-	DC.W	%0001111101011111	; y=9 pl=3 chunk=0
+	DC.W	%0001111101011011	; y=9 pl=3 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=3 chunk=2
-	DC.W	%0001111101011111	; y=9 pl=4 chunk=0
+	DC.W	%0001111101011011	; y=9 pl=4 chunk=0
 	DC.W	%0000000000000000	; y=9 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=9 pl=4 chunk=2
 	DC.W	%0010111101111110	; y=10 pl=0 chunk=0
@@ -586,19 +586,19 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0010111101111110	; y=10 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=10 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=10 pl=4 chunk=2
-	DC.W	%0011111101011111	; y=11 pl=0 chunk=0
+	DC.W	%0011011100111111	; y=11 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=11 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=0 chunk=2
-	DC.W	%0011111101011111	; y=11 pl=1 chunk=0
+	DC.W	%0011011100111111	; y=11 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=11 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=1 chunk=2
-	DC.W	%0011111101011111	; y=11 pl=2 chunk=0
+	DC.W	%0011011100111111	; y=11 pl=2 chunk=0
 	DC.W	%1000000000000000	; y=11 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=2 chunk=2
-	DC.W	%0011111101011111	; y=11 pl=3 chunk=0
+	DC.W	%0011011100111111	; y=11 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=11 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=3 chunk=2
-	DC.W	%0011111101011111	; y=11 pl=4 chunk=0
+	DC.W	%0011011100111111	; y=11 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=11 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=11 pl=4 chunk=2
 	DC.W	%0011111111111111	; y=12 pl=0 chunk=0
@@ -616,19 +616,19 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0011111111111111	; y=12 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=12 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=12 pl=4 chunk=2
-	DC.W	%0011111111111111	; y=13 pl=0 chunk=0
+	DC.W	%0011101111111111	; y=13 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=13 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=0 chunk=2
-	DC.W	%0011111111111111	; y=13 pl=1 chunk=0
+	DC.W	%0011101111111111	; y=13 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=13 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=1 chunk=2
-	DC.W	%0011111111111111	; y=13 pl=2 chunk=0
+	DC.W	%0011101111111111	; y=13 pl=2 chunk=0
 	DC.W	%1000000000000000	; y=13 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=2 chunk=2
-	DC.W	%0011111111111111	; y=13 pl=3 chunk=0
+	DC.W	%0011101111111111	; y=13 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=13 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=3 chunk=2
-	DC.W	%0011111111111111	; y=13 pl=4 chunk=0
+	DC.W	%0011101111111111	; y=13 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=13 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=13 pl=4 chunk=2
 	DC.W	%0011111111111111	; y=14 pl=0 chunk=0
@@ -691,19 +691,19 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0011111111111111	; y=17 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=17 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=17 pl=4 chunk=2
-	DC.W	%0011111111111111	; y=18 pl=0 chunk=0
+	DC.W	%0011111111111110	; y=18 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=0 chunk=2
-	DC.W	%0011111111111111	; y=18 pl=1 chunk=0
+	DC.W	%0011111111111110	; y=18 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=1 chunk=2
-	DC.W	%0011111111111111	; y=18 pl=2 chunk=0
+	DC.W	%0011111111111110	; y=18 pl=2 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=2 chunk=2
-	DC.W	%0011111111111111	; y=18 pl=3 chunk=0
+	DC.W	%0011111111111110	; y=18 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=3 chunk=2
-	DC.W	%0011111111111111	; y=18 pl=4 chunk=0
+	DC.W	%0011111111111110	; y=18 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=18 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=18 pl=4 chunk=2
 	DC.W	%0010101100011111	; y=19 pl=0 chunk=0
@@ -721,19 +721,19 @@ jetpacspritesheet_energy_mask:
 	DC.W	%0010101100011111	; y=19 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=19 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=19 pl=4 chunk=2
-	DC.W	%0011111101111111	; y=20 pl=0 chunk=0
+	DC.W	%0011111101011110	; y=20 pl=0 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=0 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=0 chunk=2
-	DC.W	%0011111101111111	; y=20 pl=1 chunk=0
+	DC.W	%0011111101011110	; y=20 pl=1 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=1 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=1 chunk=2
-	DC.W	%0011111101111111	; y=20 pl=2 chunk=0
+	DC.W	%0011111101011110	; y=20 pl=2 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=2 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=2 chunk=2
-	DC.W	%0011111101111111	; y=20 pl=3 chunk=0
+	DC.W	%0011111101011110	; y=20 pl=3 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=3 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=3 chunk=2
-	DC.W	%0011111101111111	; y=20 pl=4 chunk=0
+	DC.W	%0011111101011110	; y=20 pl=4 chunk=0
 	DC.W	%1000000000000000	; y=20 pl=4 chunk=1
 	DC.W	%0000000000000000	; y=20 pl=4 chunk=2
 	DC.W	%0000111101011110	; y=21 pl=0 chunk=0
