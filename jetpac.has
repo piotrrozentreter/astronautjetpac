@@ -74,6 +74,7 @@ extern var jetpacspritesheet_flyu_004:int;
 extern var jetpacspritesheet_fuel:int;
 extern var jetpacspritesheet_meteor:int;
 extern var jetpacspritesheet_meteorr:int;
+extern var jetpacspritesheet_rocket:int;
 extern var jetpacspritesheet_ufo_0002:int;
 extern var jetpacspritesheet_ufo_0003:int;
 extern var jetpacspritesheet_ufo_0004:int;
@@ -163,6 +164,8 @@ const EXPLOSION_ANIM_FRAMES = 4;     // expl_1 .. expl_4
 const EXPLOSION_ANIM_RATE = 3;       // frames per explosion cel
 const EXPLOSION_MAX_X = 304;         // 16x16 sprite in 320-wide display
 const EXPLOSION_MAX_Y = 240;         // 16x16 sprite in 256-high display
+const ROCKET_POS_X = 256;            // 64px wide rocket anchored at right edge (320 - 64)
+const ROCKET_POS_Y = 130;            // place in lower screen region (bottom 70%)
 
 const MAX_LEVELS = 5;
 
@@ -307,6 +310,9 @@ main:
         id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } fire_bob_right_a = id;
         id = CreateBob(&jetpacspritesheet_flylf_004, 1); if (id == -1) { return -1; } fire_bob_left_b = id;
         id = CreateBob(&jetpacspritesheet_flyrf_004, 1); if (id == -1) { return -1; } fire_bob_right_b = id;
+
+        id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_a = id;
+        id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_b = id;
 
         player_face_right = 1;
 
@@ -989,11 +995,13 @@ main:
         call CopyLevelBuffer();
         call GetBobBackground(player_bob_right, player_x, player_y);
         call PasteBob(player_bob_right, player_x, player_y, 1);
+        call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
         call draw_hud_on_current_screen(0);
         call SwapScreen();
         call CopyLevelBuffer();
         call GetBobBackground(player_bob_right_b, player_x, player_y);
         call PasteBob(player_bob_right_b, player_x, player_y, 1);
+        call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
         call draw_hud_on_current_screen(1);
 
         while (run == 1)
@@ -1061,6 +1069,7 @@ main:
                 call draw_meteors_on_current_screen(1);
                 call draw_explosions_on_current_screen(1);
                 call draw_laser_on_current_screen(1);
+                call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
                 call draw_hud_on_current_screen(1);
             }
             else
@@ -1111,6 +1120,7 @@ main:
                 call draw_meteors_on_current_screen(0);
                 call draw_explosions_on_current_screen(0);
                 call draw_laser_on_current_screen(0);
+                call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
                 call draw_hud_on_current_screen(0);
             }
 
@@ -2230,6 +2240,8 @@ data main_data:
     fire_bob_right_a.l = 0
     fire_bob_left_b.l = 0
     fire_bob_right_b.l = 0
+    rocket_bob_a.l = 0
+    rocket_bob_b.l = 0
     laser_fire_prev.b = 0
     current_level.b = 1
     current_lives.b = 3
