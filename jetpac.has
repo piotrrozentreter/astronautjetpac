@@ -166,6 +166,14 @@ const EXPLOSION_MAX_X = 304;         // 16x16 sprite in 320-wide display
 const EXPLOSION_MAX_Y = 240;         // 16x16 sprite in 256-high display
 const ROCKET_POS_X = 256;            // 64px wide rocket anchored at right edge (320 - 64)
 const ROCKET_POS_Y = 130;            // place in lower screen region (bottom 70%)
+const PICKUP_FALL_SPEED = 2;
+const PICKUP_TOP_Y = 0;
+const PICKUP_MAX_X = 280;
+const FUEL_SPAWN_DELAY_MIN = 80;
+const FUEL_SPAWN_DELAY_RANGE = 180;
+const ENERGY_SPAWN_DELAY_MIN = 160;
+const ENERGY_SPAWN_DELAY_RANGE = 260;
+const ENERGY_VISIBLE_FRAMES = 500;   // 10 seconds at 50Hz
 
 const MAX_LEVELS = 5;
 
@@ -313,6 +321,11 @@ main:
 
         id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_a = id;
         id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_b = id;
+
+        id = CreateBob(&jetpacspritesheet_fuel, 1); if (id == -1) { return -1; } fuel_bob_a = id;
+        id = CreateBob(&jetpacspritesheet_fuel, 1); if (id == -1) { return -1; } fuel_bob_b = id;
+        id = CreateBob(&jetpacspritesheet_energy, 1); if (id == -1) { return -1; } energy_bob_a = id;
+        id = CreateBob(&jetpacspritesheet_energy, 1); if (id == -1) { return -1; } energy_bob_b = id;
 
         player_face_right = 1;
 
@@ -667,6 +680,240 @@ main:
         }
     }
 
+    proc spawn_fuel() -> void {
+        var rv:int;
+        rv = prng_next();
+        fuel_x = (((rv >> 3) & 255) % 35) << 3;
+        if (fuel_x < 0) { fuel_x = 0; }
+        if (fuel_x > PICKUP_MAX_X) { fuel_x = PICKUP_MAX_X; }
+        fuel_y = PICKUP_TOP_Y;
+        fuel_falling = 1;
+        fuel_carried = 0;
+        fuel_to_rocket = 0;
+        fuel_pickup_lock = 0;
+        fuel_active = 1;
+        fuel_prev_valid_a = 0;
+        fuel_prev_valid_b = 0;
+    }
+
+    proc spawn_energy() -> void {
+        var rv:int;
+        rv = prng_next();
+        energy_x = (((rv >> 11) & 255) % 35) << 3;
+        if (energy_x < 0) { energy_x = 0; }
+        if (energy_x > PICKUP_MAX_X) { energy_x = PICKUP_MAX_X; }
+        energy_y = PICKUP_TOP_Y;
+        energy_falling = 1;
+        energy_active = 1;
+        energy_ttl = ENERGY_VISIBLE_FRAMES;
+        energy_prev_valid_a = 0;
+        energy_prev_valid_b = 0;
+    }
+
+    proc update_pickups() -> void {
+        var rv:int;
+        var next_y:int;
+        var p_left:int;
+        var p_right:int;
+        var p_top:int;
+        var p_bottom:int;
+        var f_left:int;
+        var f_right:int;
+        var f_top:int;
+        var f_bottom:int;
+
+        if (fuel_active == 0)
+        {
+            if (fuel_spawn_timer > 0) { fuel_spawn_timer = fuel_spawn_timer - 1; }
+            if (fuel_spawn_timer == 0)
+            {
+                call spawn_fuel();
+                rv = prng_next();
+                fuel_spawn_timer = FUEL_SPAWN_DELAY_MIN + ((rv >> 8) & 255) % FUEL_SPAWN_DELAY_RANGE;
+            }
+        }
+        else if (fuel_carried != 0)
+        {
+            fuel_x = player_x;
+            fuel_y = player_y + 16;
+            if (fuel_y < 0) { fuel_y = 0; }
+
+            if (player_x == ROCKET_POS_X + 16)
+            {
+                fuel_carried = 0;
+                fuel_to_rocket = 1;
+                fuel_x = ROCKET_POS_X + 16;
+            }
+        }
+        else if (fuel_to_rocket != 0)
+        {
+            next_y = fuel_y + PICKUP_FALL_SPEED;
+            if (next_y >= 256 - 32 * 2)
+            {
+                fuel_active = 0;
+                fuel_to_rocket = 0;
+                rocket_fuel = rocket_fuel + 10;
+                if (rocket_fuel >= 100)
+                {
+                    rocket_fuel = 100;
+                    level_completed = 1;
+                }
+            }
+            else
+            {
+                fuel_y = next_y;
+            }
+        }
+        else if (fuel_falling != 0)
+        {
+            next_y = fuel_y + PICKUP_FALL_SPEED;
+            if (next_y > 255) { next_y = 255; }
+            if (IsPositionWalkable(fuel_x + 2, next_y + 24, 0) != 0 &&
+                IsPositionWalkable(fuel_x + 16, next_y + 24, 0) != 0)
+            {
+                fuel_y = next_y;
+            }
+            else
+            {
+                fuel_falling = 0;
+                fuel_pickup_lock = 1;
+            }
+        }
+
+        if (fuel_active != 0 && fuel_falling == 0 && fuel_carried == 0 && fuel_to_rocket == 0)
+        {
+            p_left = player_x;
+            p_right = player_x + PLAYER_BOB_W_M1;
+            p_top = player_y;
+            p_bottom = player_y + PLAYER_BOB_H_M1;
+
+            f_left = fuel_x;
+            f_right = fuel_x + 15;
+            f_top = fuel_y;
+            f_bottom = fuel_y + 15;
+
+            if (fuel_pickup_lock == 1)
+            {
+                if (p_right < f_left || p_left > f_right || p_bottom < f_top || p_top > f_bottom)
+                {
+                    fuel_pickup_lock = 0;
+                }
+            }
+            else
+            {
+                if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
+                {
+                    fuel_carried = 1;
+                }
+            }
+        }
+
+        if (energy_active == 0)
+        {
+            if (energy_spawn_timer > 0) { energy_spawn_timer = energy_spawn_timer - 1; }
+            if (energy_spawn_timer == 0)
+            {
+                call spawn_energy();
+                rv = prng_next();
+                energy_spawn_timer = ENERGY_SPAWN_DELAY_MIN + ((rv >> 12) & 255) % ENERGY_SPAWN_DELAY_RANGE;
+            }
+        }
+        else
+        {
+            if (energy_falling != 0)
+            {
+                next_y = energy_y + PICKUP_FALL_SPEED;
+                if (next_y > 255) { next_y = 255; }
+                if (IsPositionWalkable(energy_x + 2, next_y + 24, 0) != 0 &&
+                    IsPositionWalkable(energy_x + 16, next_y + 24, 0) != 0)
+                {
+                    energy_y = next_y;
+                }
+                else
+                {
+                    energy_falling = 0;
+                }
+            }
+
+            if (energy_ttl > 0) { energy_ttl = energy_ttl - 1; }
+            if (energy_ttl == 0)
+            {
+                energy_active = 0;
+            }
+        }
+    }
+
+    proc erase_pickups_on_current_screen(use_b:byte) -> void {
+        if (use_b != 0)
+        {
+            if (fuel_prev_valid_b != 0) { call PasteBackground(fuel_bob_b, fuel_prev_x_b, fuel_prev_y_b); }
+            fuel_prev_valid_b = 0;
+
+            if (energy_prev_valid_b != 0) { call PasteBackground(energy_bob_b, energy_prev_x_b, energy_prev_y_b); }
+            energy_prev_valid_b = 0;
+        }
+        else
+        {
+            if (fuel_prev_valid_a != 0) { call PasteBackground(fuel_bob_a, fuel_prev_x_a, fuel_prev_y_a); }
+            fuel_prev_valid_a = 0;
+
+            if (energy_prev_valid_a != 0) { call PasteBackground(energy_bob_a, energy_prev_x_a, energy_prev_y_a); }
+            energy_prev_valid_a = 0;
+        }
+    }
+
+    proc capture_pickups_background_on_current_screen(use_b:byte) -> void {
+        if (fuel_active != 0)
+        {
+            if (use_b != 0) { call GetBobBackground(fuel_bob_b, fuel_x, fuel_y); }
+            else { call GetBobBackground(fuel_bob_a, fuel_x, fuel_y); }
+        }
+
+        if (energy_active != 0)
+        {
+            if (use_b != 0) { call GetBobBackground(energy_bob_b, energy_x, energy_y); }
+            else { call GetBobBackground(energy_bob_a, energy_x, energy_y); }
+        }
+    }
+
+    proc draw_pickups_on_current_screen(use_b:byte) -> void {
+        if (fuel_active != 0)
+        {
+            if (use_b != 0)
+            {
+                call PasteBob(fuel_bob_b, fuel_x, fuel_y, 1);
+                fuel_prev_x_b = fuel_x;
+                fuel_prev_y_b = fuel_y;
+                fuel_prev_valid_b = 1;
+            }
+            else
+            {
+                call PasteBob(fuel_bob_a, fuel_x, fuel_y, 1);
+                fuel_prev_x_a = fuel_x;
+                fuel_prev_y_a = fuel_y;
+                fuel_prev_valid_a = 1;
+            }
+        }
+
+        if (energy_active != 0)
+        {
+            if (use_b != 0)
+            {
+                call PasteBob(energy_bob_b, energy_x, energy_y, 1);
+                energy_prev_x_b = energy_x;
+                energy_prev_y_b = energy_y;
+                energy_prev_valid_b = 1;
+            }
+            else
+            {
+                call PasteBob(energy_bob_a, energy_x, energy_y, 1);
+                energy_prev_x_a = energy_x;
+                energy_prev_y_a = energy_y;
+                energy_prev_valid_a = 1;
+            }
+        }
+    }
+
     // Erase previous beam pixels for current buffer.
     proc erase_laser_on_current_screen(use_b:byte) -> void {
         var i:int;
@@ -932,6 +1179,7 @@ main:
     }
 
     proc init_game() -> int {
+        var rv:int;
         player_x = 160 - 8;
         player_y = 256-80;
 
@@ -957,6 +1205,23 @@ main:
         call CreateMap(current_level);
         call init_meteors();
         call init_explosions();
+        fuel_active = 0;
+        fuel_falling = 0;
+        fuel_carried = 0;
+        fuel_to_rocket = 0;
+        fuel_pickup_lock = 0;
+        fuel_prev_valid_a = 0;
+        fuel_prev_valid_b = 0;
+        energy_active = 0;
+        energy_falling = 0;
+        energy_ttl = 0;
+        energy_prev_valid_a = 0;
+        energy_prev_valid_b = 0;
+        rv = prng_next();
+        fuel_spawn_timer = FUEL_SPAWN_DELAY_MIN + ((rv >> 5) & 255) % FUEL_SPAWN_DELAY_RANGE;
+        rv = prng_next();
+        energy_spawn_timer = ENERGY_SPAWN_DELAY_MIN + ((rv >> 9) & 255) % ENERGY_SPAWN_DELAY_RANGE;
+        rocket_fuel = 0;
         level_dirty = 1;
         call RefreshLevelBuffersIfDirty();
         call update_hud_state();
@@ -991,6 +1256,7 @@ main:
         prev_x_b = player_x;
         prev_y_b = player_y;
         prev_bob_b = player_bob_right_b;
+        level_completed = 0;
 
         call CopyLevelBuffer();
         call GetBobBackground(player_bob_right, player_x, player_y);
@@ -1017,6 +1283,7 @@ main:
             call update_laser();
             call update_meteors();
             call update_explosions();
+            call update_pickups();
             call update_hud_state();
 
             if(screen == 0)
@@ -1025,6 +1292,7 @@ main:
                 call erase_laser_on_current_screen(1);
                 call erase_meteors_on_current_screen(1);
                 call erase_explosions_on_current_screen(1);
+                call erase_pickups_on_current_screen(1);
                 call PasteBackground(prev_bob_b, prev_x_b, prev_y_b);
 
                 if(player_thrusting != 0)
@@ -1061,6 +1329,7 @@ main:
                 call GetBobBackground(draw_bob, player_x, player_y);
                 call capture_meteors_background_on_current_screen(1);
                 call capture_explosions_background_on_current_screen(1);
+                call capture_pickups_background_on_current_screen(1);
                 call PasteBob(draw_bob, player_x, player_y, 1);
                 prev_x_b = player_x;
                 prev_y_b = player_y;
@@ -1068,6 +1337,7 @@ main:
 
                 call draw_meteors_on_current_screen(1);
                 call draw_explosions_on_current_screen(1);
+                call draw_pickups_on_current_screen(1);
                 call draw_laser_on_current_screen(1);
                 call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
                 call draw_hud_on_current_screen(1);
@@ -1078,6 +1348,7 @@ main:
                 call erase_laser_on_current_screen(0);
                 call erase_meteors_on_current_screen(0);
                 call erase_explosions_on_current_screen(0);
+                call erase_pickups_on_current_screen(0);
                 call PasteBackground(prev_bob_a, prev_x_a, prev_y_a);
 
                 if(player_thrusting != 0)
@@ -1112,6 +1383,7 @@ main:
                 call GetBobBackground(draw_bob, player_x, player_y);
                 call capture_meteors_background_on_current_screen(0);
                 call capture_explosions_background_on_current_screen(0);
+                call capture_pickups_background_on_current_screen(0);
                 call PasteBob(draw_bob, player_x, player_y, 1);
                 prev_x_a = player_x;
                 prev_y_a = player_y;
@@ -1119,6 +1391,7 @@ main:
 
                 call draw_meteors_on_current_screen(0);
                 call draw_explosions_on_current_screen(0);
+                call draw_pickups_on_current_screen(0);
                 call draw_laser_on_current_screen(0);
                 call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
                 call draw_hud_on_current_screen(0);
@@ -1126,9 +1399,18 @@ main:
 
             call WaitVBlank();
             call Show();
+
+            if(level_completed)
+            {
+                call level_complete_dummy();
+            }
         }
 
         return 0;
+    }
+
+    // Placeholder level-complete hook for future stage transition logic.
+    proc level_complete_dummy() -> void {
     }
 
     // Galois LFSR-based PRNG: advances seed one step and returns new seed in d0.
@@ -2018,6 +2300,7 @@ code level_code:
 
         current_level = level;
         if (current_level < 1 || current_level > MAX_LEVELS) { current_level = 1; }
+        rocket_fuel = 0;
 
         // Load global into typed local for array access
         map_ptr = map_data;
@@ -2210,6 +2493,7 @@ data data_map1:
 bss level_bss:
     level_start_x.b: 1
     level_start_y.b: 1
+    level_completed.b: 1
     map_data.l: 1  // u8* pointer (4 bytes, untyped)
     level_screen.b[51200]   // 320 * 256 / 8 * 5 bitplanes
     
@@ -2242,6 +2526,10 @@ data main_data:
     fire_bob_right_b.l = 0
     rocket_bob_a.l = 0
     rocket_bob_b.l = 0
+    fuel_bob_a.l = 0
+    fuel_bob_b.l = 0
+    energy_bob_a.l = 0
+    energy_bob_b.l = 0
     laser_fire_prev.b = 0
     current_level.b = 1
     current_lives.b = 3
@@ -2253,6 +2541,33 @@ data main_data:
     hud_dirty_a.b = 0
     hud_dirty_b.b = 0
     hud_force_redraw.b = 1
+    rocket_fuel.w = 0
+    fuel_active.b = 0
+    fuel_falling.b = 0
+    fuel_carried.b = 0
+    fuel_to_rocket.b = 0
+    fuel_pickup_lock.b = 0
+    fuel_x.w = 0
+    fuel_y.w = 0
+    fuel_spawn_timer.w = 0
+    fuel_prev_x_a.w = 0
+    fuel_prev_y_a.w = 0
+    fuel_prev_valid_a.b = 0
+    fuel_prev_x_b.w = 0
+    fuel_prev_y_b.w = 0
+    fuel_prev_valid_b.b = 0
+    energy_active.b = 0
+    energy_falling.b = 0
+    energy_x.w = 0
+    energy_y.w = 0
+    energy_spawn_timer.w = 0
+    energy_ttl.w = 0
+    energy_prev_x_a.w = 0
+    energy_prev_y_a.w = 0
+    energy_prev_valid_a.b = 0
+    energy_prev_x_b.w = 0
+    energy_prev_y_b.w = 0
+    energy_prev_valid_b.b = 0
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
