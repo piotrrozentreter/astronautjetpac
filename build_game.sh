@@ -318,7 +318,7 @@ else
 fi
 
 echo "[2/3] Assemble objects..."
-VASM_FLAGS=(-Fhunk -devpac -I "$LIB_DIR")
+VASM_FLAGS=(-m68000 -Fhunk -kick1hunks -I "$LIB_DIR")
 "$VASM" "${VASM_FLAGS[@]}" "$OUT_S" -o "$OUT_O"
 
 OBJECTS=("$OUT_O")
@@ -339,6 +339,6 @@ if [[ -d "$ASSETS_DIR" ]]; then
 fi
 
 echo "[3/3] Link..."
-"$VLINK" -bamigahunk "${OBJECTS[@]}" -o "$OUT_EXE"
+"$VLINK" -bamigahunk -Bstatic "${OBJECTS[@]}" -o "$OUT_EXE"
 
 echo "Done: ${OUT_EXE#$ROOT/}"

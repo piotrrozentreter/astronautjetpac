@@ -19,7 +19,7 @@ extern func DebugFlushToDos() -> void;
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
 extern func ReadJoystick() -> u32;
-extern func ReadJoystickFire() -> int;
+extern func ReadJoystickFire() -> u8;
 
 extern func CreateBob(descriptor_ptr:int, b:int) -> int;
 extern func PasteBob(handle:int, x:int, y:int, mode:int) -> void;
@@ -145,7 +145,7 @@ const METEOR_BOB_H = 17;      // original pixel height of meteor sprite
 const METEOR_BOB_W_M1 = 47;   // last pixel column of 48px-wide meteor
 const METEOR_START_X = 272;   // spawn at visible right edge (320 - 48)
 const METEOR_LEFT_START_X = 0; // spawn at visible left edge
-const METEOR_MIN_Y = 16;      // minimum spawn Y (top guard)
+const METEOR_MIN_Y = 64;      // minimum spawn Y (top guard)
 const METEOR_MAX_Y = 176;     // keep BOB fully inside 320x256 display
 const METEOR_SPAWN_Y_RANGE = 224; // [16..239] inclusive
 const METEOR_SPAWN_DELAY = 35; // frames between successive spawns
@@ -162,8 +162,8 @@ const UFO_VERT_SPEED = 1;
 const MAX_EXPLOSIONS = 2;            // 2 slots x 8 BOBs = 16 BOBs; keep small to fit heap
 const EXPLOSION_ANIM_FRAMES = 4;     // expl_1 .. expl_4
 const EXPLOSION_ANIM_RATE = 3;       // frames per explosion cel
-const EXPLOSION_MAX_X = 304;         // 16x16 sprite in 320-wide display
-const EXPLOSION_MAX_Y = 240;         // 16x16 sprite in 256-high display
+const EXPLOSION_MAX_X = 288;         // 32x32 sprite in 320-wide display
+const EXPLOSION_MAX_Y = 224;         // 32x32 sprite in 256-high display
 const ROCKET_POS_X = 256;            // 64px wide rocket anchored at right edge (320 - 64)
 const ROCKET_POS_Y = 130;            // place in lower screen region (bottom 70%)
 const PICKUP_FALL_SPEED = 2;
@@ -174,6 +174,10 @@ const FUEL_SPAWN_DELAY_RANGE = 180;
 const ENERGY_SPAWN_DELAY_MIN = 160;
 const ENERGY_SPAWN_DELAY_RANGE = 260;
 const ENERGY_VISIBLE_FRAMES = 500;   // 10 seconds at 50Hz
+
+const SFX_LASER = 0;
+const SFX_EXPLOSION = 1;
+const SFX_FUEL_SET = 2;
 
 const MAX_LEVELS = 5;
 
@@ -202,6 +206,67 @@ main:
         asm {
             move.w (a0),d0
             ext.l d0
+        }
+    }
+
+    proc InitSound() -> void {
+        asm {
+            movem.l    d0/a0/a6,-(sp)
+
+; installs a CIA-B interrupt for calling _mt_music
+            lea        $DFF000,a6
+            move.l     #0,a0                            ; vectorBase
+            moveq      #1,d0                            ; PAL clock
+            jsr        _mt_install_cia
+
+; reserves channel 0 for music.
+            lea        $DFF000,a6
+            move.b     #$01,d0
+            jsr        _mt_musicmask
+
+            movem.l    (sp)+,d0/a0/a6
+        }
+    }
+
+    proc PlaySoundEffect(sfx_id: int) -> void {
+        asm {
+; plays sound effect on channel 1
+            movem.l    a6,-(sp)
+            move.l     8(a6),d0        ; d0 = sfx_id parameter
+            clr.l d1                   ; 0 = no loop
+            jsr        play_sfx
+            movem.l    (sp)+,a6
+        }
+    }
+
+    proc PlayMusic() -> void {
+        asm {
+; plays pro-tracker music
+            movem.l a6,-(sp)
+            lea music,a0
+            lea        $DFF000,a6
+            move.l     #0,a1
+            move.b     #0,d0
+            jsr        _mt_init
+            move.b     #1,_mt_Enable
+
+; sets master volume to 8 for music
+            lea        $DFF000,a6
+            move.w     #12,d0
+            jsr        _mt_mastervol
+            movem.l (sp)+,a6
+        }
+    }
+
+    proc QuitSound() -> void {
+        asm {
+            movem.l    a6,-(sp)
+
+            lea        $DFF000,a6
+            jsr        _mt_end
+            jsr        _mt_remove_cia
+
+            movem.l    (sp)+,a6
         }
     }
 
@@ -353,7 +418,7 @@ main:
     proc update_player() -> void {
         var joy:u32;
         var is_walking:byte;
-        var fire_btn:byte;
+        var fire_btn:u8;
         var new_x:int;
         var new_y:int;
         var x_ok:u8;
@@ -435,8 +500,7 @@ main:
             fly_timer = 0;
         }
 
-        fire_btn = 0;
-        if(ReadJoystickFire() != 0) { fire_btn = 1; }
+        fire_btn = ReadJoystickFire();
 
         // Fire state machine:
         // mode 1 = standing fire (idle only), mode 2 = flying fire.
@@ -624,6 +688,7 @@ main:
                         beam_color_phase[idx] = 0;
                         beam_active[idx] = 1;
                         spawned = 1;
+                        call PlaySoundEffect(SFX_LASER);
                     }
                 }
 
@@ -750,6 +815,7 @@ main:
             next_y = fuel_y + PICKUP_FALL_SPEED;
             if (next_y >= 256 - 32 * 2)
             {
+                call PlaySoundEffect(SFX_FUEL_SET);
                 fuel_active = 0;
                 fuel_to_rocket = 0;
                 rocket_fuel = rocket_fuel + 10;
@@ -810,7 +876,7 @@ main:
 
         if (energy_active == 0)
         {
-            if (energy_spawn_timer > 0) { energy_spawn_timer = energy_spawn_timer - 1; }
+            if (energy_spawn_timer > 0) { energy_spawn_timer--; }
             if (energy_spawn_timer == 0)
             {
                 call spawn_energy();
@@ -832,6 +898,23 @@ main:
                 else
                 {
                     energy_falling = 0;
+                }
+            }
+            else
+            {
+                p_left = player_x;
+                p_right = player_x + PLAYER_BOB_W_M1;
+                p_top = player_y;
+                p_bottom = player_y + PLAYER_BOB_H_M1;
+
+                f_left = energy_x;
+                f_right = energy_x + 15;
+                f_top = energy_y;
+                f_bottom = energy_y + 15;
+
+                if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
+                {
+                    energy_active = 0;
                 }
             }
 
@@ -1077,7 +1160,6 @@ main:
         var digit:byte;
 
         v = value;
-        if(v < 0) { v = 0; }
         if(v > 9999) { v = 9999; }
 
         for i = 0 to 3
@@ -1100,7 +1182,6 @@ main:
         var digit:byte;
 
         v = value;
-        if(v < 0) { v = 0; }
         if(v > 9999) { v = 9999; }
 
         for i = 0 to 3
@@ -1110,12 +1191,11 @@ main:
             rem = v - (q * 10);
             digit = hud_digit_chars[rem];
             hud_line_text[27 + idx] = digit;
-            v = q & 65535;  // divs.w leaves remainder in high word; strip it
+            v = q;
         }
     }
 
-    // Rebuild HUD only when score/lives/high-score changes (or first forced
-    // draw), then mark both
+    // Rebuild HUD only when score/lives/high-score changes (or first forced draw), then mark both
     // buffers dirty so each screen refreshes once on its next render pass.
     proc update_hud_state() -> void {
         var shown_lives:int;
@@ -1136,7 +1216,7 @@ main:
             if(shown_lives < 0) { shown_lives = 0; }
             if(shown_lives > 9) { shown_lives = 9; }
             lives_digit = hud_digit_chars[shown_lives];
-            hud_line_text[23] = lives_digit;
+            hud_line_text[20] = lives_digit;
 
             hud_prev_score = current_score;
             hud_prev_high_score = high_score;
@@ -1187,6 +1267,7 @@ main:
         call DebugClear();
 
         call HeapInit();
+        call InitSound();
 
         if(SetGraphicsMode(0) == -1)
         {
@@ -1205,6 +1286,7 @@ main:
         call CreateMap(current_level);
         call init_meteors();
         call init_explosions();
+
         fuel_active = 0;
         fuel_falling = 0;
         fuel_carried = 0;
@@ -1223,9 +1305,9 @@ main:
         energy_spawn_timer = ENERGY_SPAWN_DELAY_MIN + ((rv >> 9) & 255) % ENERGY_SPAWN_DELAY_RANGE;
         rocket_fuel = 0;
         level_dirty = 1;
+
         call RefreshLevelBuffersIfDirty();
         call update_hud_state();
-
         call InitKeyboard();
 
         return 0;
@@ -1269,6 +1351,8 @@ main:
         call PasteBob(player_bob_right_b, player_x, player_y, 1);
         call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
         call draw_hud_on_current_screen(1);
+
+        call PlayMusic();
 
         while (run == 1)
         {
@@ -1385,6 +1469,7 @@ main:
                 call capture_explosions_background_on_current_screen(0);
                 call capture_pickups_background_on_current_screen(0);
                 call PasteBob(draw_bob, player_x, player_y, 1);
+                
                 prev_x_a = player_x;
                 prev_y_a = player_y;
                 prev_bob_a = draw_bob;
@@ -1417,14 +1502,15 @@ main:
     // Polynomial feedback: bit 0 drives XOR with $80000057 (bits 31,6,4,2,1,0).
     native proc prng_next() -> int {
         asm {
-            move.l  prng_seed,d1
-            move.l  d1,d0
-            lsr.l   #1,d0
-            btst    #0,d1
-            beq.s   .prng_no_fb
-            eori.l  #$80000057,d0
-.prng_no_fb:
-            move.l  d0,prng_seed
+            move.l  prng_seed,d1       ; load seed into d1
+            move.l  d1,d0              ; copy seed to d0
+            lsr.l   #1,d0              ; shift right by 1
+            and.l   #1,d1              ; isolate bit 0 of original seed
+            neg.l   d1                 ; if bit0=1 then d1=0xFFFFFFFF else 0
+            and.l   #$80000057,d1      ; mask feedback polynomial
+            eor.l   d0,d1              ; XOR shifted seed with mask or zero
+            move.l  d1,prng_seed       ; update seed in memory
+            move.l  d1,d0              ; return new seed in d0
         }
     }
 
@@ -1573,6 +1659,7 @@ main:
         var i:int;
 
         if (expl_slots_ready <= 0) { return; }
+        if (y < 64) { return; }  // don't spawn explosions in HUD area
 
         for i = 0 to MAX_EXPLOSIONS - 1
         {
@@ -1592,6 +1679,8 @@ main:
             expl_prev_y_b[i] = -1;
             expl_prev_valid_b[i] = 0;
             expl_active[i] = 1;
+
+            call PlaySoundEffect(SFX_EXPLOSION);
             return;
         }
     }
@@ -2086,7 +2175,7 @@ main:
             cur_x = expl_x[i];
             cur_y = expl_y[i];
             if (cur_x < 0 || cur_x > EXPLOSION_MAX_X) { continue; }
-            if (cur_y < 0 || cur_y > EXPLOSION_MAX_Y) { continue; }
+            if (cur_y < 64 || cur_y > EXPLOSION_MAX_Y) { continue; }
 
             if (use_b != 0) { bob = expl_bobs_b[i]; }
             else            { bob = expl_bobs_a[i]; }
@@ -2493,7 +2582,7 @@ data data_map1:
 bss level_bss:
     level_start_x.b: 1
     level_start_y.b: 1
-    level_completed.b: 1
+    level_completed.w: 1
     map_data.l: 1  // u8* pointer (4 bytes, untyped)
     level_screen.b[51200]   // 320 * 256 / 8 * 5 bitplanes
     
