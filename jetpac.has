@@ -148,7 +148,7 @@ const METEOR_LEFT_START_X = 0; // spawn at visible left edge
 const METEOR_MIN_Y = 64;      // minimum spawn Y (top guard)
 const METEOR_MAX_Y = 176;     // keep BOB fully inside 320x256 display
 const METEOR_SPAWN_Y_RANGE = 224; // [16..239] inclusive
-const METEOR_SPAWN_DELAY = 35; // frames between successive spawns
+const METEOR_SPAWN_DELAY = 40; // frames between successive spawns
 const ALIEN_TYPE_METEOR = 0;  // type index for horizontal meteors (future types: 1, 2 …)
 const ALIEN_TYPE_UFO_0002 = 1;
 const ALIEN_TYPE_UFO_0003 = 2;
@@ -174,10 +174,15 @@ const FUEL_SPAWN_DELAY_RANGE = 180;
 const ENERGY_SPAWN_DELAY_MIN = 160;
 const ENERGY_SPAWN_DELAY_RANGE = 260;
 const ENERGY_VISIBLE_FRAMES = 500;   // 10 seconds at 50Hz
+const SCORE_FOR_KILLING = 5;
 
 const SFX_LASER = 0;
 const SFX_EXPLOSION = 1;
 const SFX_FUEL_SET = 2;
+const SFX_JET = 3;
+const SFX_ENERGY = 4;
+const SFX_FUEL_PICKUP = 5;
+const SFX_PLAYER_DEATH = 6;
 
 const MAX_LEVELS = 5;
 
@@ -250,7 +255,7 @@ main:
             jsr        _mt_init
             move.b     #1,_mt_Enable
 
-; sets master volume to 8 for music
+; sets master volume for music
             lea        $DFF000,a6
             move.w     #12,d0
             jsr        _mt_mastervol
@@ -486,6 +491,12 @@ main:
 
         if(player_thrusting != 0)
         {
+            if(player_jet_sound == 0)
+            {
+                call PlaySoundEffect(SFX_JET);
+                player_jet_sound = 1;
+            }
+
             fly_timer = fly_timer + 1;
             if(fly_timer >= FLY_ANIM_RATE)
             {
@@ -498,6 +509,7 @@ main:
         {
             fly_frame = 0;
             fly_timer = 0;
+            player_jet_sound = 0;
         }
 
         fire_btn = ReadJoystickFire();
@@ -614,7 +626,7 @@ main:
 
             lvl = current_level;
             if(lvl < 1 || lvl > MAX_LEVELS) { lvl = 1; }
-            add_pts = 10 * lvl;
+            add_pts = SCORE_FOR_KILLING * lvl;
             current_score = current_score + add_pts;
             if(current_score > high_score) { high_score = current_score; }
 
@@ -747,6 +759,8 @@ main:
 
     proc spawn_fuel() -> void {
         var rv:int;
+
+        if(rocket_fuel >= 100) { return; }
         rv = prng_next();
         fuel_x = (((rv >> 3) & 255) % 35) << 3;
         if (fuel_x < 0) { fuel_x = 0; }
@@ -763,6 +777,8 @@ main:
 
     proc spawn_energy() -> void {
         var rv:int;
+
+        if(energy_active != 0) { return; }
         rv = prng_next();
         energy_x = (((rv >> 11) & 255) % 35) << 3;
         if (energy_x < 0) { energy_x = 0; }
@@ -869,7 +885,7 @@ main:
             {
                 if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
                 {
-                    fuel_carried = 1;
+                    fuel_carried = 1; call PlaySoundEffect(SFX_FUEL_PICKUP);
                 }
             }
         }
@@ -915,6 +931,7 @@ main:
                 if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
                 {
                     energy_active = 0;
+                    call PlaySoundEffect(SFX_ENERGY);
                 }
             }
 
@@ -1195,6 +1212,27 @@ main:
         }
     }
 
+    proc hud_write_fuel(value:int) -> void {
+        var i:int;
+        var idx:int;
+        var q:int;
+        var rem:int;
+        var v:int;
+        var digit:byte;
+
+        v = value;
+
+        for i = 0 to 2
+        {
+            idx = 2 - i;
+            q = v / 10;
+            rem = v - (q * 10);
+            digit = hud_digit_chars[rem];
+            hud_line_text[35 + idx] = digit;
+            v = q;
+        }
+    }
+
     // Rebuild HUD only when score/lives/high-score changes (or first forced draw), then mark both
     // buffers dirty so each screen refreshes once on its next render pass.
     proc update_hud_state() -> void {
@@ -1206,11 +1244,13 @@ main:
         if(current_score != hud_prev_score) { hud_changed = 1; }
         if(high_score != hud_prev_high_score) { hud_changed = 1; }
         if(current_lives != hud_prev_lives) { hud_changed = 1; }
+        if(rocket_fuel != hud_prev_fuel) { hud_changed = 1; }
         if(hud_force_redraw != 0) { hud_changed = 1; }
         if(hud_changed != 0)
         {
             call hud_write_score(current_score);
             call hud_write_high(high_score);
+            call hud_write_fuel(rocket_fuel);
 
             shown_lives = current_lives;
             if(shown_lives < 0) { shown_lives = 0; }
@@ -1221,6 +1261,7 @@ main:
             hud_prev_score = current_score;
             hud_prev_high_score = high_score;
             hud_prev_lives = current_lives;
+            hud_prev_fuel = rocket_fuel;
             hud_dirty_a = 1;
             hud_dirty_b = 1;
             hud_force_redraw = 0;
@@ -1496,6 +1537,7 @@ main:
 
     // Placeholder level-complete hook for future stage transition logic.
     proc level_complete_dummy() -> void {
+        QuitSound();
     }
 
     // Galois LFSR-based PRNG: advances seed one step and returns new seed in d0.
@@ -2599,6 +2641,7 @@ data main_data:
     walk_timer.b = 0
     vel_y.l = 0
     player_thrusting.b = 0
+    player_jet_sound.b = 0
     fly_frame.b = 0
     fly_timer.b = 0
     player_firing.b = 0
@@ -2627,6 +2670,7 @@ data main_data:
     hud_prev_score.l = 0
     hud_prev_high_score.l = 0
     hud_prev_lives.b = 0
+    hud_prev_fuel.b = 0
     hud_dirty_a.b = 0
     hud_dirty_b.b = 0
     hud_force_redraw.b = 1
@@ -2660,7 +2704,7 @@ data main_data:
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
-    hud_line_text.b = "score: 0000  lives: 3  hi: 0000", 0
+    hud_line_text.b = "score: 0000  lives: 3  hi: 0000 f: 000%", 0
 
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]

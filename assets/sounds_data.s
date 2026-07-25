@@ -9,6 +9,10 @@ SFX_VOLUME      equ 32
 SFX_PRI_LASER       equ 127
 SFX_PRI_EXPLOSION   equ 126
 SFX_PRI_FUEL        equ 125
+SFX_PRI_JET         equ 128
+SFX_PRI_ENERGY      equ 127
+SFX_PRI_PICKUP      equ 125
+SFX_PRI_DEAD        equ 128
 
     SECTION    sounds,DATA_C
 
@@ -31,7 +35,29 @@ sfx_fuel:
     even
 sfx_fuel_len   EQU (*-sfx_fuel)/2
 
+sfx_jet:       
+    dc.w       0
+    incbin     "sfx_jet.raw"
+    even
+sfx_jet_len   EQU (*-sfx_jet)/2
 
+sfx_energy:       
+    dc.w       0
+    incbin     "sfx_energy.raw"
+    even
+sfx_energy_len   EQU (*-sfx_energy)/2
+
+sfx_pickup:       
+    dc.w       0
+    incbin     "sfx_pickup.raw"
+    even
+sfx_pickup_len   EQU (*-sfx_pickup)/2
+
+sfx_dead:       
+    dc.w       0
+    incbin     "sfx_death.raw"
+    even
+sfx_dead_len   EQU (*-sfx_dead)/2
 
     SECTION    sounds_data,CODE
 
@@ -61,3 +87,35 @@ sfx_table:
     dc.w       SFX_VOLUME                    ; volume
     dc.b       -1                            ; channel
     dc.b       SFX_PRI_FUEL                   ; priority
+
+    ; 3 - jet sound effect
+    dc.l       sfx_jet
+    dc.w       sfx_jet_len              
+    dc.w       SFX_PERIOD                 
+    dc.w       SFX_VOLUME                  
+    dc.b       -1                           
+    dc.b       SFX_PRI_JET                   
+
+    ; 4 - energy sound effect
+    dc.l       sfx_energy
+    dc.w       sfx_energy_len              
+    dc.w       SFX_PERIOD                 
+    dc.w       SFX_VOLUME                  
+    dc.b       -1                           
+    dc.b       SFX_PRI_ENERGY                   
+
+    ; 5 - fuel pickup sound effect
+    dc.l       sfx_pickup
+    dc.w       sfx_pickup_len              
+    dc.w       SFX_PERIOD                 
+    dc.w       SFX_VOLUME                  
+    dc.b       -1                           
+    dc.b       SFX_PRI_PICKUP    
+
+    ; 6 - player death pickup sound effect
+    dc.l       sfx_dead
+    dc.w       sfx_dead_len              
+    dc.w       SFX_PERIOD                 
+    dc.w       SFX_VOLUME                  
+    dc.b       -1                           
+    dc.b       SFX_PRI_DEAD    
