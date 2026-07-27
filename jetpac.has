@@ -193,6 +193,9 @@ const SFX_FUEL_PICKUP = 5;
 const SFX_PLAYER_DEATH = 6;
 
 const MAX_LEVELS = 5;
+const DEATH_ANIM_FRAMES = 5;      // frames in dead-l/dead-r animation
+const DEATH_ANIM_RATE   = 4;      // VBlanks per death animation cel
+const DEATH_WAIT_FRAMES = 150;    // ~3 s at 50 Hz PAL
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -406,6 +409,18 @@ main:
         id = CreateBob(&jetpacspritesheet_rocket3, 1); if (id == -1) { return -1; } rocket_anim_bobs[2] = id;
         id = CreateBob(&jetpacspritesheet_rocket4, 1); if (id == -1) { return -1; } rocket_anim_bobs[3] = id;
         id = CreateBob(&jetpacspritesheet_rocket5, 1); if (id == -1) { return -1; } rocket_anim_bobs[4] = id;
+
+        // Dead animation frames (deadl_000-004, deadr_000-004) used during player death.
+        id = CreateBob(&jetpacspritesheet_deadl_000, 1); if (id == -1) { return -1; } dead_bobs_left[0] = id;
+        id = CreateBob(&jetpacspritesheet_deadl_001, 1); if (id == -1) { return -1; } dead_bobs_left[1] = id;
+        id = CreateBob(&jetpacspritesheet_deadl_002, 1); if (id == -1) { return -1; } dead_bobs_left[2] = id;
+        id = CreateBob(&jetpacspritesheet_deadl_003, 1); if (id == -1) { return -1; } dead_bobs_left[3] = id;
+        id = CreateBob(&jetpacspritesheet_deadl_004, 1); if (id == -1) { return -1; } dead_bobs_left[4] = id;
+        id = CreateBob(&jetpacspritesheet_deadr_000, 1); if (id == -1) { return -1; } dead_bobs_right[0] = id;
+        id = CreateBob(&jetpacspritesheet_deadr_001, 1); if (id == -1) { return -1; } dead_bobs_right[1] = id;
+        id = CreateBob(&jetpacspritesheet_deadr_002, 1); if (id == -1) { return -1; } dead_bobs_right[2] = id;
+        id = CreateBob(&jetpacspritesheet_deadr_003, 1); if (id == -1) { return -1; } dead_bobs_right[3] = id;
+        id = CreateBob(&jetpacspritesheet_deadr_004, 1); if (id == -1) { return -1; } dead_bobs_right[4] = id;
 
         id = CreateBob(&jetpacspritesheet_fuel, 1); if (id == -1) { return -1; } fuel_bob_a = id;
         id = CreateBob(&jetpacspritesheet_fuel, 1); if (id == -1) { return -1; } fuel_bob_b = id;
@@ -1427,6 +1442,7 @@ main:
             call update_player();
             call update_laser();
             call update_meteors();
+            call check_player_meteor_collision();
             call update_explosions();
             call update_pickups();
             call update_hud_state();
@@ -1577,9 +1593,247 @@ main:
                 call draw_hud_on_current_screen(1);
                 call PlayMusic();
             }
+
+            if (player_dead != 0)
+            {
+                if (player_die() != 0)
+                {
+                    run = 0;
+                }
+                else
+                {
+                    prev_x_a = player_x;
+                    prev_y_a = player_y;
+                    prev_bob_a = player_bob_right;
+                    prev_x_b = player_x;
+                    prev_y_b = player_y;
+                    prev_bob_b = player_bob_right_b;
+                    if (player_face_right == 0)
+                    {
+                        prev_bob_a = player_bob_left;
+                        prev_bob_b = player_bob_left_b;
+                    }
+
+                    screen = 1;
+
+                    call CopyLevelBuffer();
+                    call GetBobBackground(prev_bob_a, player_x, player_y);
+                    call PasteBob(prev_bob_a, player_x, player_y, 1);
+                    call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
+                    call draw_hud_on_current_screen(0);
+                    call SwapScreen();
+                    call CopyLevelBuffer();
+                    call GetBobBackground(prev_bob_b, player_x, player_y);
+                    call PasteBob(prev_bob_b, player_x, player_y, 1);
+                    call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
+                    call draw_hud_on_current_screen(1);
+                    call PlayMusic();
+                }
+            }
         }
 
         return 0;
+    }
+
+    // Player-meteor AABB collision check; sets player_dead=1 on first hit.
+    proc check_player_meteor_collision() -> void {
+        var i:int;
+        var p_left:int;
+        var p_right:int;
+        var p_top:int;
+        var p_bottom:int;
+        var m_right:int;
+        var m_bottom:int;
+        var bob_h:int;
+
+        if (player_dead != 0) { return; }
+
+        p_left   = player_x;
+        p_right  = player_x + PLAYER_BOB_W_M1;
+        p_top    = player_y;
+        p_bottom = player_y + PLAYER_BOB_H_M1;
+
+        for i = 0 to MAX_METEORS - 1
+        {
+            if (meteor_active[i] == 0) { continue; }
+
+            bob_h = METEOR_BOB_H;
+            if (meteor_type[i] == ALIEN_TYPE_UFO_0002) { bob_h = 26; }
+            else if (meteor_type[i] == ALIEN_TYPE_UFO_0003) { bob_h = 27; }
+            else if (meteor_type[i] == ALIEN_TYPE_UFO_0004) { bob_h = 25; }
+            else if (meteor_type[i] == ALIEN_TYPE_UFO_0005) { bob_h = 29; }
+
+            m_right  = meteor_x[i] + METEOR_BOB_W_M1;
+            m_bottom = meteor_y[i] + bob_h - 1;
+
+            if (p_right  < meteor_x[i]) { continue; }
+            if (p_left   > m_right)     { continue; }
+            if (p_bottom < meteor_y[i]) { continue; }
+            if (p_top    > m_bottom)    { continue; }
+
+            player_dead = 1;
+            return;
+        }
+    }
+
+    // Death sequence: fall to solid, play dead animation for ~3 s, then respawn or
+    // call end_game.  Returns 0 = player respawned, 1 = game over.
+    proc player_die() -> int {
+        var i:int;
+        var fall_vy:int;
+        var fall_done:byte;
+        var new_y:int;
+        var stand_bob:int;
+        var anim_frame:int;
+        var anim_timer:int;
+        var anim_bob:int;
+        var wait_counter:int;
+        var rv:int;
+
+        call QuitSound();
+
+        // Clear all active entities.
+        for i = 0 to MAX_METEORS - 1
+        {
+            meteor_active[i] = 0;
+            meteor_prev_valid_a[i] = 0;
+            meteor_prev_valid_b[i] = 0;
+        }
+        for i = 0 to MAX_EXPLOSIONS - 1
+        {
+            expl_active[i] = 0;
+            expl_prev_valid_a[i] = 0;
+            expl_prev_valid_b[i] = 0;
+        }
+        for i = 0 to MAX_BEAMS - 1
+        {
+            beam_active[i] = 0;
+            beam_prev_valid_a[i] = 0;
+            beam_prev_valid_b[i] = 0;
+        }
+        fuel_active = 0;
+        fuel_prev_valid_a = 0;
+        fuel_prev_valid_b = 0;
+        energy_active = 0;
+        energy_prev_valid_a = 0;
+        energy_prev_valid_b = 0;
+
+        // If airborne, drop player to the nearest solid surface.
+        fall_vy = vel_y;
+        if (fall_vy < 0) { fall_vy = 0; }
+        fall_done = 0;
+        if (CheckPlayerCollision(player_x, player_y + 1) == 0) { fall_done = 1; }
+        if (player_y >= PLAYER_MAX_Y) { fall_done = 1; }
+
+        while (fall_done == 0)
+        {
+            fall_vy = fall_vy + GRAVITY;
+            if (fall_vy > MAX_VEL_DOWN) { fall_vy = MAX_VEL_DOWN; }
+            new_y = player_y + fall_vy;
+            if (new_y > PLAYER_MAX_Y) { new_y = PLAYER_MAX_Y; }
+            if (CheckPlayerCollision(player_x, new_y) != 0)
+            {
+                player_y = new_y;
+            }
+            else
+            {
+                fall_done = 1;
+            }
+            if (player_y >= PLAYER_MAX_Y) { fall_done = 1; }
+
+            if (player_face_right != 0) { stand_bob = asset_handles[48]; }
+            else { stand_bob = asset_handles[42]; }
+
+            call SwapScreen();
+            call CopyLevelBuffer();
+            call PasteBob(stand_bob, player_x, player_y, 1);
+            call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
+            call WaitVBlank();
+            call Show();
+        }
+        vel_y = 0;
+
+        // Play looping death animation for DEATH_WAIT_FRAMES ticks (~3 s at 50 Hz).
+        anim_frame   = 0;
+        anim_timer   = 0;
+        wait_counter = 0;
+
+        while (wait_counter < DEATH_WAIT_FRAMES)
+        {
+            if (player_face_right != 0) { anim_bob = dead_bobs_right[anim_frame]; }
+            else { anim_bob = dead_bobs_left[anim_frame]; }
+
+            call SwapScreen();
+            call CopyLevelBuffer();
+            call PasteBob(anim_bob, player_x, player_y, 1);
+            call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
+            call WaitVBlank();
+            call Show();
+
+            anim_timer = anim_timer + 1;
+            if (anim_timer >= DEATH_ANIM_RATE)
+            {
+                anim_timer = 0;
+                anim_frame = anim_frame + 1;
+                if (anim_frame >= DEATH_ANIM_FRAMES) { anim_frame = 0; }
+            }
+            wait_counter = wait_counter + 1;
+        }
+
+        // Decrement lives.
+        if (current_lives > 0) { current_lives = current_lives - 1; }
+        player_dead = 0;
+
+        if (current_lives == 0)
+        {
+            call end_game();
+            return 1;
+        }
+
+        // Respawn: reset player position and all game-object state.
+        player_x = 160 - 8;
+        player_y = 256 - 80;
+        vel_y = 0;
+        player_thrusting = 0;
+        player_jet_sound = 0;
+        walk_frame = 0;
+        walk_timer = 0;
+        fly_frame = 0;
+        fly_timer = 0;
+        fire_stand_frame = 0;
+        fire_stand_timer = 0;
+        fire_fly_frame = 0;
+        fire_fly_timer = 0;
+        player_firing = 0;
+        player_fire_mode = 0;
+        player_fire_ready = 0;
+        player_face_right = 1;
+
+        fuel_active = 0;
+        fuel_falling = 0;
+        fuel_carried = 0;
+        fuel_to_rocket = 0;
+        fuel_pickup_lock = 0;
+        fuel_prev_valid_a = 0;
+        fuel_prev_valid_b = 0;
+        energy_active = 0;
+        energy_falling = 0;
+        energy_prev_valid_a = 0;
+        energy_prev_valid_b = 0;
+        meteor_spawn_timer = 0;
+
+        rv = prng_next();
+        fuel_spawn_timer = FUEL_SPAWN_DELAY_MIN + ((rv >> 8) & 255) % FUEL_SPAWN_DELAY_RANGE;
+        rv = prng_next();
+        energy_spawn_timer = ENERGY_SPAWN_DELAY_MIN + ((rv >> 9) & 255) % ENERGY_SPAWN_DELAY_RANGE;
+
+        call update_hud_state();
+
+        return 0;
+    }
+
+    // Called when the player runs out of lives.
+    proc end_game() -> void {
     }
 
     // Animate the rocket off-screen and back before loading the next stage.
@@ -2776,6 +3030,7 @@ data main_data:
     player_y.w = 0
     level_dirty.b = 0
     player_face_right.b = 1
+    player_dead.b = 0
     player_bob_left.l = 0
     player_bob_right.l = 0
     player_bob_left_b.l = 0
@@ -2860,6 +3115,8 @@ bss bobs_bss:
     fly_left_bobs_b.l[5]
     fly_right_bobs_b.l[5]
     rocket_anim_bobs.l[5]
+    dead_bobs_left.l[5]
+    dead_bobs_right.l[5]
 
 bss laser_bss:
     beam_active.l[MAX_BEAMS]
