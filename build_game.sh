@@ -126,6 +126,43 @@ if ! command -v "$VLINK" &>/dev/null; then
     exit 1
 fi
 
+# --- vbccm68k (C compiler for 68000) ----------------------------------------
+# Resolve: VBCC_CC env > vbccm68k next to the assembler binary > PATH search.
+VBCC_CC_BIN="${VBCC_CC:-}"
+if [[ -z "$VBCC_CC_BIN" ]]; then
+    VASM_PATH="$(command -v "$VASM" 2>/dev/null || true)"
+    if [[ -n "$VASM_PATH" ]]; then
+        VASM_DIR="$(dirname "$VASM_PATH")"
+        for _cand in "$VASM_DIR/vbccm68k" "$VASM_DIR/vbccm68k.exe"; do
+            if [[ -x "$_cand" ]]; then VBCC_CC_BIN="$_cand"; break; fi
+        done
+    fi
+fi
+if [[ -z "$VBCC_CC_BIN" ]]; then
+    for _cand in vbccm68k vbccm68k.exe; do
+        if command -v "$_cand" &>/dev/null; then VBCC_CC_BIN="$(command -v "$_cand")"; break; fi
+    done
+fi
+if [[ -z "$VBCC_CC_BIN" ]]; then
+    echo "ERROR: vbccm68k not found. Set VBCC_CC=/path/to/vbccm68k." >&2
+    exit 1
+fi
+
+# Resolve vbcc include path: <vbcc_root>/targets/m68k-amigaos/include
+# VBCC_ROOT env override, or auto-detected from compiler binary location.
+VBCC_INCLUDE="${VBCC_ROOT:+$VBCC_ROOT/targets/m68k-amigaos/include}"
+if [[ -z "$VBCC_INCLUDE" ]]; then
+    _VBCC_BIN_DIR="$(dirname "$(realpath "$VBCC_CC_BIN" 2>/dev/null || echo "$VBCC_CC_BIN")")"
+    _VBCC_ROOT_CAND="$(dirname "$_VBCC_BIN_DIR")"
+    if [[ -d "$_VBCC_ROOT_CAND/targets/m68k-amigaos/include" ]]; then
+        VBCC_INCLUDE="$_VBCC_ROOT_CAND/targets/m68k-amigaos/include"
+    fi
+fi
+if [[ -z "$VBCC_INCLUDE" || ! -d "$VBCC_INCLUDE" ]]; then
+    echo "WARNING: vbcc include directory not found; compiling without -I flag." >&2
+    VBCC_INCLUDE=""
+fi
+
 mkdir -p "$BUILD"
 
 BASE_NAME="$(basename "${SRC%.has}")"
@@ -272,6 +309,7 @@ echo "  Root  : $ROOT"
 echo "  Python: $PYTHON"
 echo "  VASM  : $VASM"
 echo "  VLINK : $VLINK"
+echo "  VBCC  : $VBCC_CC_BIN"
 echo "  Out   : ${OUT_EXE#$ROOT/}"
 
 if [[ ${#SELECTED_LIBS[@]} -eq 0 ]]; then
@@ -337,6 +375,26 @@ if [[ -d "$ASSETS_DIR" ]]; then
         OBJECTS+=("$obj")
     done < <(find "$ASSETS_DIR" -maxdepth 1 -name "*.s" -type f | sort)
 fi
+
+# --- Compile star.c with vbccm68k ------------------------------------------
+STAR_C="$ROOT/star.c"
+STAR_S="$BUILD/star_c.s"
+STAR_O="$BUILD/star.o"
+if [[ -f "$STAR_C" ]]; then
+    echo "  C compile: star.c"
+    VBCC_ARGS=(-cpu=68000 -quiet "-o=$STAR_S")
+    [[ -n "$VBCC_INCLUDE" ]] && VBCC_ARGS+=("-I=$VBCC_INCLUDE")
+    VBCC_ARGS+=("$STAR_C")
+    "$VBCC_CC_BIN" "${VBCC_ARGS[@]}"
+    # Assemble the generated source; -nowarn=62 suppresses vbcc mnemonics warnings.
+    VBCC_VASM_FLAGS=(-m68000 -Fhunk -nowarn=62 -I "$LIB_DIR")
+    "$VASM" "${VBCC_VASM_FLAGS[@]}" "$STAR_S" -o "$STAR_O"
+    OBJECTS+=("$STAR_O")
+    echo "  star.o added to link"
+else
+    echo "WARNING: star.c not found at $STAR_C - skipping C star module" >&2
+fi
+
 
 echo "[3/3] Link..."
 "$VLINK" -bamigahunk -Bstatic "${OBJECTS[@]}" -o "$OUT_EXE"

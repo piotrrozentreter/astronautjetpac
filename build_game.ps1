@@ -69,6 +69,50 @@ try {
     throw "Linker not found. Set VLINK to the path of vlink."
 }
 
+# --- vbccm68k (C compiler for 68000) ----------------------------------------
+# Resolve compiler: VBCC_CC env override > vbccm68k on PATH > auto-detect next
+# to the assembler binary (common bundled layout bin/vasmm68k_mot + bin/vbccm68k).
+$VbccCC = $null
+if ($env:VBCC_CC) {
+    $VbccCC = $env:VBCC_CC
+} else {
+    $vasmPath = (Get-Command $Vasm -ErrorAction SilentlyContinue).Source
+    if ($vasmPath) {
+        $candidate = Join-Path (Split-Path -Parent $vasmPath) "vbccm68k.exe"
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            $VbccCC = $candidate
+        }
+    }
+    if (-not $VbccCC) {
+        $found = Get-Command "vbccm68k.exe" -ErrorAction SilentlyContinue
+        if ($found) { $VbccCC = $found.Source }
+    }
+    if (-not $VbccCC) {
+        $found = Get-Command "vbccm68k" -ErrorAction SilentlyContinue
+        if ($found) { $VbccCC = $found.Source }
+    }
+}
+if (-not $VbccCC) {
+    throw "vbccm68k not found. Set VBCC_CC to the path of vbccm68k.exe."
+}
+
+# Resolve vbcc include path: <vbcc_root>/targets/m68k-amigaos/include
+# VBCC_ROOT env override, or auto-detected one directory above the compiler binary.
+$VbccInclude = $null
+if ($env:VBCC_ROOT) {
+    $VbccInclude = Join-Path $env:VBCC_ROOT "targets\m68k-amigaos\include"
+} else {
+    $VbccBinDir = Split-Path -Parent $VbccCC
+    $candidate  = Join-Path (Split-Path -Parent $VbccBinDir) "targets\m68k-amigaos\include"
+    if (Test-Path $candidate -PathType Container) {
+        $VbccInclude = $candidate
+    }
+}
+if (-not $VbccInclude -or -not (Test-Path $VbccInclude -PathType Container)) {
+    Write-Warning "vbcc include directory not found; compiling without -I flag."
+    $VbccInclude = $null
+}
+
 $OutS = Join-Path $BuildDir ($OutputName + ".s")
 $OutO = Join-Path $BuildDir ($OutputName + ".o")
 $OutExe = Join-Path $BuildDir ($OutputName + ".exe")
@@ -178,6 +222,7 @@ Write-Host "  Python: $Python"
 Write-Host "  HASC  : $HascRoot"
 Write-Host "  VASM  : $Vasm"
 Write-Host "  VLINK : $Vlink"
+Write-Host "  VBCC  : $VbccCC"
 Write-Host "  Out   : $OutExe"
 if ($SelectedLibs.Count -gt 0) {
     Write-Host "  Libs  :"
@@ -200,7 +245,7 @@ try {
     Set-Location $oldLocation
 }
 
-$VasmArgs = @("-m68000", "-Fhunk", "-kick1hunks", "-I", $LibDir)
+$VasmArgs = @("-m68000", "-Fhunk", "-kick1hunks", "-nowarn=62", "-I", $LibDir)
 & $Vasm @VasmArgs $OutS "-o" $OutO
 if ($LASTEXITCODE -ne 0) {
     throw "Assembly of main source failed with exit code $LASTEXITCODE"
@@ -228,6 +273,33 @@ if (Test-Path $AssetsDir) {
         $Objects.Add($obj)
     }
 }
+
+# --- Compile star.c with vbccm68k ----------------------------------------
+$StarC   = Join-Path $Root "star.c"
+$StarS   = Join-Path $BuildDir "star_c.s"
+$StarO   = Join-Path $BuildDir "star.o"
+if (Test-Path $StarC) {
+    Write-Host "  C compile: star.c"
+    $VbccArgs = @("-cpu=68000", "-quiet", "-o=$StarS")
+    if ($VbccInclude) { $VbccArgs += "-I=$VbccInclude" }
+    $VbccArgs += $StarC
+    & $VbccCC @VbccArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "vbccm68k compilation of star.c failed with exit code $LASTEXITCODE"
+    }
+    # Assemble the generated source; skip -kick1hunks to stay compatible with
+    # the opt/idnt directives that vbccm68k emits, add -nowarn=62 as per vbcc config.
+    $VbccVasmArgs = @("-m68000", "-Fhunk", "-nowarn=62", "-I", $LibDir)
+    & $Vasm @VbccVasmArgs $StarS "-o" $StarO
+    if ($LASTEXITCODE -ne 0) {
+        throw "Assembly of star_c.s failed with exit code $LASTEXITCODE"
+    }
+    $Objects.Add($StarO)
+    Write-Host "  star.o added to link"
+} else {
+    Write-Warning "star.c not found at $StarC - skipping C star module"
+}
+
 
 & $Vlink "-bamigahunk" "-Bstatic" @($Objects.ToArray()) "-o" $OutExe
 if ($LASTEXITCODE -ne 0) {

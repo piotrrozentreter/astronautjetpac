@@ -21,6 +21,9 @@ extern func GetKey() -> byte;
 extern func ReadJoystick() -> u32;
 extern func ReadJoystickFire() -> u8;
 
+extern func _stars_init(screen: int) -> void;
+extern func _stars_animate(screen: int) -> void;
+
 extern func CreateBob(descriptor_ptr:int, b:int) -> int;
 extern func PasteBob(handle:int, x:int, y:int, mode:int) -> void;
 extern func DestroyBob(handle:int) -> void;
@@ -1363,6 +1366,9 @@ main:
         call update_hud_state();
         call InitKeyboard();
 
+        // Scatter the initial star field on the current video buffer.
+        call _stars_init(gfx_current_screen_ptr);
+
         return 0;
     }
 
@@ -1416,6 +1422,8 @@ main:
             }
 
             call SwapScreen();
+            // Animate stars on the newly active back buffer once per frame.
+            call _stars_animate(gfx_current_screen_ptr);
             call update_player();
             call update_laser();
             call update_meteors();
