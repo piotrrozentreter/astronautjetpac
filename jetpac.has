@@ -69,20 +69,10 @@ extern var jetpacspritesheet_flyrf_001:int;
 extern var jetpacspritesheet_flyrf_002:int;
 extern var jetpacspritesheet_flyrf_003:int;
 extern var jetpacspritesheet_flyrf_004:int;
-extern var jetpacspritesheet_flyu_000:int;
-extern var jetpacspritesheet_flyu_001:int;
-extern var jetpacspritesheet_flyu_002:int;
-extern var jetpacspritesheet_flyu_003:int;
-extern var jetpacspritesheet_flyu_004:int;
 extern var jetpacspritesheet_fuel:int;
 extern var jetpacspritesheet_meteor:int;
 extern var jetpacspritesheet_meteorr:int;
 extern var jetpacspritesheet_rocket:int;
-extern var jetpacspritesheet_rocket1:int;
-extern var jetpacspritesheet_rocket2:int;
-extern var jetpacspritesheet_rocket3:int;
-extern var jetpacspritesheet_rocket4:int;
-extern var jetpacspritesheet_rocket5:int;
 extern var jetpacspritesheet_ufo_0002:int;
 extern var jetpacspritesheet_ufo_0003:int;
 extern var jetpacspritesheet_ufo_0004:int;
@@ -111,6 +101,7 @@ extern var jetpacspritesheet_walkfr4:int;
 extern var jetpacspritesheet_walkfr5:int;
 
 const KEY_ESC = 69;
+const KEY_F1 = $50;
 const JOY_RIGHT = 2;
 const JOY_DOWN = 4;
 const JOY_LEFT = 512;
@@ -195,7 +186,7 @@ const SFX_PLAYER_DEATH = 6;
 const MAX_LEVELS = 5;
 const DEATH_ANIM_FRAMES = 5;      // frames in dead-l/dead-r animation
 const DEATH_ANIM_RATE   = 4;      // VBlanks per death animation cel
-const DEATH_WAIT_FRAMES = 150;    // ~3 s at 50 Hz PAL
+const DEATH_WAIT_FRAMES = 100;    // ~3 s at 50 Hz PAL
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -402,13 +393,6 @@ main:
 
         id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_a = id;
         id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_b = id;
-
-        // Rocket animation frames (rocket1-rocket5) used during level_complete transition.
-        id = CreateBob(&jetpacspritesheet_rocket1, 1); if (id == -1) { return -1; } rocket_anim_bobs[0] = id;
-        id = CreateBob(&jetpacspritesheet_rocket2, 1); if (id == -1) { return -1; } rocket_anim_bobs[1] = id;
-        id = CreateBob(&jetpacspritesheet_rocket3, 1); if (id == -1) { return -1; } rocket_anim_bobs[2] = id;
-        id = CreateBob(&jetpacspritesheet_rocket4, 1); if (id == -1) { return -1; } rocket_anim_bobs[3] = id;
-        id = CreateBob(&jetpacspritesheet_rocket5, 1); if (id == -1) { return -1; } rocket_anim_bobs[4] = id;
 
         // Dead animation frames (deadl_000-004, deadr_000-004) used during player death.
         id = CreateBob(&jetpacspritesheet_deadl_000, 1); if (id == -1) { return -1; } dead_bobs_left[0] = id;
@@ -1435,6 +1419,13 @@ main:
             {
                 run = 0;
             }
+            else
+            {
+                if(key == KEY_F1)
+                {
+                    level_completed = 1;
+                }
+            }
 
             call SwapScreen();
             // Animate stars on the newly active back buffer once per frame.
@@ -1690,8 +1681,6 @@ main:
         var wait_counter:int;
         var rv:int;
 
-        call QuitSound();
-
         // Clear all active entities.
         for i = 0 to MAX_METEORS - 1
         {
@@ -1751,7 +1740,7 @@ main:
             call WaitVBlank();
             call Show();
         }
-        vel_y = 0;
+        vel_y = 0; player_y = player_y + 15;
 
         // Play looping death animation for DEATH_WAIT_FRAMES ticks (~3 s at 50 Hz).
         anim_frame   = 0;
@@ -1775,7 +1764,7 @@ main:
             {
                 anim_timer = 0;
                 anim_frame = anim_frame + 1;
-                if (anim_frame >= DEATH_ANIM_FRAMES) { anim_frame = 0; }
+                if (anim_frame >= DEATH_ANIM_FRAMES) { anim_frame = DEATH_ANIM_FRAMES-1; }
             }
             wait_counter = wait_counter + 1;
         }
@@ -1843,8 +1832,6 @@ main:
         var rocket_dir:int;
         var next_level:int;
         var transition_done:byte;
-        var anim_frame:int;
-        var anim_timer:int;
 
         QuitSound();
         
@@ -1883,25 +1870,14 @@ main:
         rocket_y = ROCKET_POS_Y;
         rocket_dir = -1;
         transition_done = 0;
-        anim_frame = 0;
-        anim_timer = 0;
 
         while(transition_done == 0)
         {
             call SwapScreen();
             call CopyLevelBuffer();
-            call PasteBob(rocket_anim_bobs[anim_frame], ROCKET_POS_X, rocket_y, 1);
+            call PasteBob(rocket_bob_a, ROCKET_POS_X, rocket_y, 1);
             call WaitVBlank();
             call Show();
-
-            // advance animation frame (4 VBlanks per frame)
-            anim_timer = anim_timer + 1;
-            if(anim_timer >= 4)
-            {
-                anim_timer = 0;
-                anim_frame = anim_frame + 1;
-                if(anim_frame >= 5) { anim_frame = 0; }
-            }
 
             if(rocket_dir < 0)
             {
@@ -1914,7 +1890,7 @@ main:
             }
             else
             {
-                rocket_y = rocket_y + 2;
+                rocket_y = rocket_y + 3;
                 if(rocket_y >= ROCKET_POS_Y)
                 {
                     rocket_y = ROCKET_POS_Y;
@@ -1934,6 +1910,9 @@ main:
         call CreateMap(current_level);
         call RefreshLevelBuffersIfDirty();
         call update_hud_state();
+
+        call InitSound();
+        call PlayMusic();
     }
 
 
@@ -3114,7 +3093,6 @@ bss bobs_bss:
     fire_fly_right_bobs_b.l[5]
     fly_left_bobs_b.l[5]
     fly_right_bobs_b.l[5]
-    rocket_anim_bobs.l[5]
     dead_bobs_left.l[5]
     dead_bobs_right.l[5]
 

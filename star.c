@@ -24,7 +24,7 @@
 #define NUM_PLANES      5
 #define BYTES_PER_ROW   (SCREEN_WIDTH / 8)            /* 40  */
 #define ROW_STRIDE      (NUM_PLANES * BYTES_PER_ROW)  /* 200 */
-#define NUM_STARS       50
+#define NUM_STARS       20
 
 typedef unsigned char  u8;
 typedef unsigned short u16;
@@ -96,15 +96,14 @@ void stars_init(u8 *screen)
  * stars_animate - assign each existing star a new random colour index.
  * screen : pointer to the active video buffer (gfx_current_screen_ptr)
  *
- * Each star is erased (colour 0) at its current position, given a new
- * random colour (1-31) and immediately redrawn, so the call is safe to
- * use inside a double-buffered game loop when called on the back buffer.
+ * Each star is given a new random colour (1-31) and redrawn in place.
+ * plot_pixel() fully overwrites all five bitplanes, so an explicit erase
+ * pass would only duplicate work.
  */
 void stars_animate(u8 *screen)
 {
     int i;
     for (i = 0; i < NUM_STARS; i++) {
-        plot_pixel(screen, star_x[i], star_y[i], 0u);          /* erase  */
         star_color[i] = (u8)((star_rand() & 30u) + 1u);        /* recolour */
         plot_pixel(screen, star_x[i], star_y[i], star_color[i]); /* redraw */
     }

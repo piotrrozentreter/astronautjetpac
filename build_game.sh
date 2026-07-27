@@ -356,7 +356,7 @@ else
 fi
 
 echo "[2/3] Assemble objects..."
-VASM_FLAGS=(-m68000 -Fhunk -kick1hunks -I "$LIB_DIR")
+VASM_FLAGS=(-m68000 -quiet -Fhunk -kick1hunks -I "$LIB_DIR")
 "$VASM" "${VASM_FLAGS[@]}" "$OUT_S" -o "$OUT_O"
 
 OBJECTS=("$OUT_O")
@@ -387,7 +387,7 @@ if [[ -f "$STAR_C" ]]; then
     VBCC_ARGS+=("$STAR_C")
     "$VBCC_CC_BIN" "${VBCC_ARGS[@]}"
     # Assemble the generated source; -nowarn=62 suppresses vbcc mnemonics warnings.
-    VBCC_VASM_FLAGS=(-m68000 -Fhunk -nowarn=62 -I "$LIB_DIR")
+    VBCC_VASM_FLAGS=(-m68000 -quiet -Fhunk -nowarn=62 -I "$LIB_DIR")
     "$VASM" "${VBCC_VASM_FLAGS[@]}" "$STAR_S" -o "$STAR_O"
     OBJECTS+=("$STAR_O")
     echo "  star.o added to link"
