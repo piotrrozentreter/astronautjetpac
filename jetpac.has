@@ -21,6 +21,9 @@ extern func GetKey() -> byte;
 extern func ReadJoystick() -> u32;
 extern func ReadJoystickFire() -> u8;
 
+extern func _stars_init(screen: int) -> void;
+extern func _stars_animate(screen: int) -> void;
+
 extern func CreateBob(descriptor_ptr:int, b:int) -> int;
 extern func PasteBob(handle:int, x:int, y:int, mode:int) -> void;
 extern func DestroyBob(handle:int) -> void;
@@ -75,6 +78,11 @@ extern var jetpacspritesheet_fuel:int;
 extern var jetpacspritesheet_meteor:int;
 extern var jetpacspritesheet_meteorr:int;
 extern var jetpacspritesheet_rocket:int;
+extern var jetpacspritesheet_rocket1:int;
+extern var jetpacspritesheet_rocket2:int;
+extern var jetpacspritesheet_rocket3:int;
+extern var jetpacspritesheet_rocket4:int;
+extern var jetpacspritesheet_rocket5:int;
 extern var jetpacspritesheet_ufo_0002:int;
 extern var jetpacspritesheet_ufo_0003:int;
 extern var jetpacspritesheet_ufo_0004:int;
@@ -391,6 +399,13 @@ main:
 
         id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_a = id;
         id = CreateBob(&jetpacspritesheet_rocket, 1); if (id == -1) { return -1; } rocket_bob_b = id;
+
+        // Rocket animation frames (rocket1-rocket5) used during level_complete transition.
+        id = CreateBob(&jetpacspritesheet_rocket1, 1); if (id == -1) { return -1; } rocket_anim_bobs[0] = id;
+        id = CreateBob(&jetpacspritesheet_rocket2, 1); if (id == -1) { return -1; } rocket_anim_bobs[1] = id;
+        id = CreateBob(&jetpacspritesheet_rocket3, 1); if (id == -1) { return -1; } rocket_anim_bobs[2] = id;
+        id = CreateBob(&jetpacspritesheet_rocket4, 1); if (id == -1) { return -1; } rocket_anim_bobs[3] = id;
+        id = CreateBob(&jetpacspritesheet_rocket5, 1); if (id == -1) { return -1; } rocket_anim_bobs[4] = id;
 
         id = CreateBob(&jetpacspritesheet_fuel, 1); if (id == -1) { return -1; } fuel_bob_a = id;
         id = CreateBob(&jetpacspritesheet_fuel, 1); if (id == -1) { return -1; } fuel_bob_b = id;
@@ -1351,6 +1366,9 @@ main:
         call update_hud_state();
         call InitKeyboard();
 
+        // Scatter the initial star field on the current video buffer.
+        call _stars_init(gfx_current_screen_ptr);
+
         return 0;
     }
 
@@ -1404,6 +1422,8 @@ main:
             }
 
             call SwapScreen();
+            // Animate stars on the newly active back buffer once per frame.
+            call _stars_animate(gfx_current_screen_ptr);
             call update_player();
             call update_laser();
             call update_meteors();
@@ -1529,36 +1549,133 @@ main:
             if(level_completed)
             {
                 call level_complete();
+
+                prev_x_a = player_x;
+                prev_y_a = player_y;
+                prev_bob_a = player_bob_right;
+                prev_x_b = player_x;
+                prev_y_b = player_y;
+                prev_bob_b = player_bob_right_b;
+                if(player_face_right == 0)
+                {
+                    prev_bob_a = player_bob_left;
+                    prev_bob_b = player_bob_left_b;
+                }
+
+                screen = 1;
+
+                call CopyLevelBuffer();
+                call GetBobBackground(prev_bob_a, player_x, player_y);
+                call PasteBob(prev_bob_a, player_x, player_y, 1);
+                call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
+                call draw_hud_on_current_screen(0);
+                call SwapScreen();
+                call CopyLevelBuffer();
+                call GetBobBackground(prev_bob_b, player_x, player_y);
+                call PasteBob(prev_bob_b, player_x, player_y, 1);
+                call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
+                call draw_hud_on_current_screen(1);
+                call PlayMusic();
             }
         }
 
         return 0;
     }
 
-    // Placeholder level-complete hook for future stage transition logic.
+    // Animate the rocket off-screen and back before loading the next stage.
     proc level_complete() -> void {
+        var i:int;
+        var rocket_y:int;
+        var rocket_dir:int;
+        var next_level:int;
+        var transition_done:byte;
+        var anim_frame:int;
+        var anim_timer:int;
+
         QuitSound();
         
         for i = 0 to MAX_METEORS - 1
         {
             meteor_active[i] = 0;
+            meteor_prev_valid_a[i] = 0;
+            meteor_prev_valid_b[i] = 0;
         }
 
         for i = 0 to MAX_EXPLOSIONS - 1
         {
             expl_active[i] = 0;
+            expl_prev_valid_a[i] = 0;
+            expl_prev_valid_b[i] = 0;
         }
         
         for i = 0 to MAX_BEAMS - 1
         {
             beam_active[i] = 0;
+            beam_prev_valid_a[i] = 0;
+            beam_prev_valid_b[i] = 0;
         }
 
         fuel_active = 0;
+        fuel_prev_valid_a = 0;
+        fuel_prev_valid_b = 0;
         energy_active = 0;
+        energy_prev_valid_a = 0;
+        energy_prev_valid_b = 0;
         level_completed = 0;
-        current_level = current_level + 1;
-        if(current_level > MAX_LEVELS) { current_level = 1; }
+
+        next_level = current_level + 1;
+        if(next_level > MAX_LEVELS) { next_level = 1; }
+
+        rocket_y = ROCKET_POS_Y;
+        rocket_dir = -1;
+        transition_done = 0;
+        anim_frame = 0;
+        anim_timer = 0;
+
+        while(transition_done == 0)
+        {
+            call SwapScreen();
+            call CopyLevelBuffer();
+            call PasteBob(rocket_anim_bobs[anim_frame], ROCKET_POS_X, rocket_y, 1);
+            call WaitVBlank();
+            call Show();
+
+            // advance animation frame (4 VBlanks per frame)
+            anim_timer = anim_timer + 1;
+            if(anim_timer >= 4)
+            {
+                anim_timer = 0;
+                anim_frame = anim_frame + 1;
+                if(anim_frame >= 5) { anim_frame = 0; }
+            }
+
+            if(rocket_dir < 0)
+            {
+                rocket_y = rocket_y - 2;
+                if(rocket_y <= 0)
+                {
+                    rocket_y = 0;
+                    rocket_dir = 1;
+                }
+            }
+            else
+            {
+                rocket_y = rocket_y + 2;
+                if(rocket_y >= ROCKET_POS_Y)
+                {
+                    rocket_y = ROCKET_POS_Y;
+                    transition_done = 1;
+                }
+            }
+        }
+
+        call SwapScreen();
+        call CopyLevelBuffer();
+        call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
+        call WaitVBlank();
+        call Show();
+
+        current_level = next_level;
         level_dirty = 1;
         call CreateMap(current_level);
         call RefreshLevelBuffersIfDirty();
@@ -2742,6 +2859,7 @@ bss bobs_bss:
     fire_fly_right_bobs_b.l[5]
     fly_left_bobs_b.l[5]
     fly_right_bobs_b.l[5]
+    rocket_anim_bobs.l[5]
 
 bss laser_bss:
     beam_active.l[MAX_BEAMS]
