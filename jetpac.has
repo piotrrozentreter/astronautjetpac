@@ -128,6 +128,7 @@ const FIRE_STAND_ANIM_FRAMES = 5;
 const FIRE_STAND_ANIM_RATE = 3;
 const FIRE_FLY_ANIM_FRAMES = 5;
 const FIRE_FLY_ANIM_RATE = 3;
+const FIRE_LAND_COOLDOWN_FRAMES = 3;
 const GRAVITY = 1;
 const THRUST = 3;
 const MAX_VEL_DOWN = 6;
@@ -480,14 +481,28 @@ main:
     proc update_player() -> void {
         var joy:u32;
         var is_walking:byte;
+        var is_moving:byte;
         var fire_btn:u8;
         var new_x:int;
         var new_y:int;
         var x_ok:u8;
         var y_ok:u8;
         var vy:int;
+        var was_grounded:byte;
+        var now_grounded:byte;
+        var landed_this_frame:byte;
+        var can_continue_fly:byte;
+        var can_continue_stand:byte;
 
         joy = ReadJoystick();
+
+        if(fire_land_cooldown_timer > 0)
+        {
+            fire_land_cooldown_timer = fire_land_cooldown_timer - 1;
+        }
+
+        was_grounded = 0;
+        if(CheckPlayerCollision(player_x, player_y + 1) == 0) { was_grounded = 1; }
 
         new_x = player_x;
         new_y = player_y;
@@ -526,9 +541,24 @@ main:
         if(y_ok != 0) { player_y = new_y; }
         else { vel_y = 0; }
 
+        now_grounded = 0;
+        if(CheckPlayerCollision(player_x, player_y + 1) == 0) { now_grounded = 1; }
+        landed_this_frame = 0;
+        if(was_grounded == 0 && now_grounded != 0) { landed_this_frame = 1; }
+        if(landed_this_frame != 0)
+        {
+            fire_land_cooldown_timer = FIRE_LAND_COOLDOWN_FRAMES;
+        }
+
         is_walking = 0;
         if(joy & JOY_LEFT)  { is_walking = 1; }
         if(joy & JOY_RIGHT) { is_walking = 1; }
+
+        is_moving = 0;
+        if(joy & JOY_LEFT)  { is_moving = 1; }
+        if(joy & JOY_RIGHT) { is_moving = 1; }
+        if(joy & JOY_UP)    { is_moving = 1; }
+        if(joy & JOY_DOWN)  { is_moving = 1; }
 
         if(is_walking)
         {
@@ -572,21 +602,45 @@ main:
         fire_btn = ReadJoystickFire();
 
         // Fire state machine:
-        // mode 1 = standing fire (idle only), mode 2 = flying fire.
+        // mode 1 = standing fire sequence, mode 2 = flying fire sequence,
+        // mode 3 = hold-fire while moving: keep last fire frame and keep shooting.
         player_firing = 0;
         player_fire_mode = 0;
+        can_continue_fly = 0;
+        can_continue_stand = 0;
+
+        if(fire_fly_frame > 0)
+        {
+            if(fire_fly_frame < (FIRE_FLY_ANIM_FRAMES - 1)) { can_continue_fly = 1; }
+        }
+
+        if(fire_stand_frame > 0)
+        {
+            if(fire_stand_frame < (FIRE_STAND_ANIM_FRAMES - 1)) { can_continue_stand = 1; }
+        }
 
         if(fire_btn != 0)
         {
-            if(player_thrusting != 0)
+            if(fire_land_cooldown_timer == 0)
             {
-                player_firing = 1;
-                player_fire_mode = 2;
-            }
-            else if(is_walking == 0)
-            {
-                player_firing = 1;
-                player_fire_mode = 1;
+                if(player_thrusting != 0 || can_continue_fly != 0)
+                {
+                    player_firing = 1;
+                    player_fire_mode = 2;
+                }
+                else if(is_walking == 0 || can_continue_stand != 0)
+                {
+                    player_firing = 1;
+                    player_fire_mode = 1;
+                }
+                else if(is_moving != 0)
+                {
+                    if(player_fire_ready != 0)
+                    {
+                        player_firing = 1;
+                        player_fire_mode = 3;
+                    }
+                }
             }
         }
 
@@ -625,6 +679,13 @@ main:
 
             if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
             else { player_fire_ready = 0; }
+        }
+        else if(player_fire_mode == 3)
+        {
+            // Keep whichever fire sequence reached its last frame.
+            player_fire_ready = 0;
+            if(fire_stand_frame >= (FIRE_STAND_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
+            if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
         }
         else
         {
@@ -1542,6 +1603,19 @@ main:
                     if(player_face_right == 1) { draw_bob = fire_stand_right_bobs_b[fire_stand_frame]; }
                     else { draw_bob = fire_stand_left_bobs_b[fire_stand_frame]; }
                 }
+                else if(player_fire_mode == 3)
+                {
+                    if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1))
+                    {
+                        if(player_face_right == 1) { draw_bob = fire_fly_right_bobs_b[FIRE_FLY_ANIM_FRAMES - 1]; }
+                        else { draw_bob = fire_fly_left_bobs_b[FIRE_FLY_ANIM_FRAMES - 1]; }
+                    }
+                    else
+                    {
+                        if(player_face_right == 1) { draw_bob = fire_stand_right_bobs_b[FIRE_STAND_ANIM_FRAMES - 1]; }
+                        else { draw_bob = fire_stand_left_bobs_b[FIRE_STAND_ANIM_FRAMES - 1]; }
+                    }
+                }
                 else
                 {
                     if(player_face_right == 1) { draw_bob = walk_right_bobs_b[walk_frame]; }
@@ -1570,6 +1644,19 @@ main:
                 {
                     if(player_face_right == 1) { idx = 5 + fire_stand_frame; }
                     else { idx = 0 + fire_stand_frame; }
+                }
+                else if(player_fire_mode == 3)
+                {
+                    if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1))
+                    {
+                        if(player_face_right == 1) { idx = 26 + (FIRE_FLY_ANIM_FRAMES - 1); }
+                        else { idx = 16 + (FIRE_FLY_ANIM_FRAMES - 1); }
+                    }
+                    else
+                    {
+                        if(player_face_right == 1) { idx = 5 + (FIRE_STAND_ANIM_FRAMES - 1); }
+                        else { idx = 0 + (FIRE_STAND_ANIM_FRAMES - 1); }
+                    }
                 }
                 else
                 {
@@ -1773,6 +1860,7 @@ main:
                         player_firing = 0;
                         player_fire_mode = 0;
                         player_fire_ready = 0;
+                        fire_land_cooldown_timer = 0;
                         player_face_right = 1;
                         player_dead = 0;
 
@@ -2028,6 +2116,7 @@ main:
         player_firing = 0;
         player_fire_mode = 0;
         player_fire_ready = 0;
+        fire_land_cooldown_timer = 0;
         player_face_right = 1;
 
         fuel_active = 0;
@@ -3268,6 +3357,7 @@ data main_data:
     player_firing.b = 0
     player_fire_mode.b = 0
     player_fire_ready.b = 0
+    fire_land_cooldown_timer.b = 0
     laser_refill_timer.b = 0
     fire_stand_frame.b = 0
     fire_stand_timer.b = 0
