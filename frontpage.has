@@ -1,0 +1,74 @@
+#pragma lockreg(a5);
+
+extern func TakeSystem() -> void;
+extern func ReleaseSystem() -> void;
+extern func SetGraphicsMode(mode:int) -> int;
+extern func ClearScreen() -> void;
+extern func LoadPalette(palette_ptr:int, num_colors:int) -> void;
+extern func ShowPicture(picture_addr:int) -> int;
+extern func UpdateCopperList() -> void;
+extern func SwapScreen() -> void;
+extern func WaitVBlank() -> void;
+extern func InitKeyboard() -> void;
+extern func GetKey() -> byte;
+extern func ReadMouse() -> void;
+extern func GetMouseLBtn() -> int;
+extern var frontpage_ham6_dummy:int;
+extern var frontpage_ham6_palette:int;
+
+const KEY_ESC = 69;
+
+code frontpage:
+
+    public main;
+
+    proc frontpage_run() -> int {
+        var result:int;
+
+        result = SetGraphicsMode(2);
+        if (result < 0)
+        {
+            return -1;
+        }
+
+        call ClearScreen();
+        call LoadPalette(&frontpage_ham6_palette, 16);
+        call ShowPicture(&frontpage_ham6_dummy);
+        call UpdateCopperList();
+        call SwapScreen();
+
+        call InitKeyboard();
+
+        while (1)
+        {
+            call WaitVBlank();
+            call ReadMouse();
+
+            if (GetMouseLBtn() != 0)
+            {
+                break;
+            }
+
+            if (GetKey() == KEY_ESC)
+            {
+                break;
+            }
+        }
+
+        return 0;
+    }
+
+    asm {
+main:
+        jsr TakeSystem
+        jsr frontpage_run
+        jmp ReleaseSystem
+
+; Placeholder HAM6 picture data (320x256x6bpp = 61440 bytes).
+; Replace this label later with imported HAM6 data include.
+frontpage_ham6_palette:
+    dcb.w 16,$000
+
+frontpage_ham6_dummy:
+        dcb.b 61440,0
+    }
