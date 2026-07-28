@@ -9,4 +9,4 @@ music:
     incbin "music.mod"
     even
 music1:
-    incbin "music.mod"
+    incbin "music1.mod"

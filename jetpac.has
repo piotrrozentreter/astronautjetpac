@@ -4,7 +4,6 @@ extern func SetGraphicsMode(mode:int) -> int;
 extern func SwapScreen() -> void;
 extern func ClearScreen() -> void;
 extern func Show() -> void;
-extern func WaitVBlank() -> void;
 extern func SetColor(index:int, color:int) -> void;
 extern func HeapInit() -> void;
 extern func SetFont(font_ptr:int) -> int;
@@ -187,14 +186,14 @@ const SFX_PLAYER_DEATH = 6;
 const MAX_LEVELS = 5;
 const DEATH_ANIM_FRAMES = 5;      // frames in dead-l/dead-r animation
 const DEATH_ANIM_RATE   = 4;      // VBlanks per death animation cel
-const DEATH_WAIT_FRAMES = 100;    // ~2 s at 50 Hz PAL
-const GAME_OVER_WAIT_FRAMES = 150; // 3 s at 50 Hz PAL
+const DEATH_WAIT_FRAMES = 40;   
+const GAME_OVER_WAIT_FRAMES = 50; 
 const MENU_ROCKET_START_X = 0;
 const MENU_ROCKET_Y = 72;
 const MENU_ROCKET_STEP = 2;
 const MENU_ROCKET_MAX_X = 256;
-const MENU_PLAYER_X = 128;
-const MENU_PLAYER_Y = 168;
+const MENU_PLAYER_X = 128+18;
+const MENU_PLAYER_Y = 168+10;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -221,6 +220,25 @@ main:
         asm {
             move.w (a0),d0
             ext.l d0
+        }
+    }
+
+    // Wait exactly one new video frame (prevents fast CPUs from returning
+    // multiple times while the beam is still on the same VBlank line).
+    proc WaitFrame() -> void {
+        asm {
+            movem.l d0,-(sp)
+.wf_leave_line:
+            move.l $004(a5),d0
+            and.l #$1ff00,d0
+            cmp.l #303<<8,d0
+            beq.b .wf_leave_line
+.wf_next_vblank:
+            move.l $004(a5),d0
+            and.l #$1ff00,d0
+            cmp.l #303<<8,d0
+            bne.b .wf_next_vblank
+            movem.l (sp)+,d0
         }
     }
 
@@ -274,7 +292,7 @@ main:
 
 ; sets master volume for music
             lea        $DFF000,a6
-            move.w     #14,d0
+            move.w     #16,d0
             jsr        _mt_mastervol
             movem.l (sp)+,a6
         }
@@ -282,15 +300,23 @@ main:
 
     proc SwitchMusic(track_id: int) -> void {
         asm {
-; stops current replay and starts another track without removing CIA music interrupt
-            movem.l    d0/a0/a1/a6,-(sp)
-            move.l     8(a6),d0
-            move.b     #0,_mt_Enable
+; stops current replay and restarts the CIA-based replayer for a new module
+            movem.l    d0/d1/a0/a1/a6,-(sp)
+            move.l     8(a6),d1
+            movem.l    d1,-(sp)
 
+            move.b     #0,_mt_Enable
+            
             lea        $DFF000,a6
             jsr        _mt_end
+            jsr        _mt_remove_cia
 
-            cmpi.l     #1,d0
+            move.l     #0,a0
+            moveq      #1,d0
+            jsr        _mt_install_cia
+
+            movem.l    (sp)+,d1
+            cmpi.l     #1,d1
             beq.s      .switch_music1
             lea        music,a0
             bra.s      .switch_music_ready
@@ -303,9 +329,9 @@ main:
             move.b     #1,_mt_Enable
 
 ; keeps same master volume as PlayMusic
-            move.w     #14,d0
+            move.w     #16,d0
             jsr        _mt_mastervol
-            movem.l    (sp)+,d0/a0/a1/a6
+            movem.l    (sp)+,d0/d1/a0/a1/a6
         }
     }
 
@@ -1312,7 +1338,7 @@ main:
             q = v / 10;
             rem = v - (q * 10);
             digit = hud_digit_chars[rem];
-            hud_line_text[7 + idx] = digit;
+            hud_line_text[6 + idx] = digit;
             v = q;
         }
     }
@@ -1334,7 +1360,7 @@ main:
             q = v / 10;
             rem = v - (q * 10);
             digit = hud_digit_chars[rem];
-            hud_line_text[27 + idx] = digit;
+            hud_line_text[29 + idx] = digit;
             v = q;
         }
     }
@@ -1364,10 +1390,25 @@ main:
     proc run_title_menu() -> int {
         var key:byte;
         var fire_btn:u8;
+        var wait_release:byte;
+        var wait_release_frames:int;
         var screen:int;
         var rocket_x:int;
         var rocket_bob:int;
         var player_bob:int;
+
+        call QuitSound();
+
+        // Guard against a stuck/noisy fire input: require a release before start,
+        // but never block the menu transition.
+        wait_release = 0;
+        key = GetKey();
+        fire_btn = ReadJoystickFire();
+        if((key != 0) || (fire_btn != 0))
+        {
+            wait_release = 1;
+            wait_release_frames = 75;
+        }
 
         call menu_write_high(high_score);
 
@@ -1383,7 +1424,25 @@ main:
             }
 
             fire_btn = ReadJoystickFire();
-            if((key != 0) || (fire_btn != 0))
+            if(wait_release != 0)
+            {
+                if((key == 0) && (fire_btn == 0))
+                {
+                    wait_release = 0;
+                }
+                else
+                {
+                    if(wait_release_frames > 0)
+                    {
+                        wait_release_frames = wait_release_frames - 1;
+                    }
+                    if(wait_release_frames == 0)
+                    {
+                        wait_release = 0;
+                    }
+                }
+            }
+            else if((key != 0) || (fire_btn != 0))
             {
                 return 1;
             }
@@ -1410,11 +1469,11 @@ main:
             call GetBobBackground(player_bob, MENU_PLAYER_X, MENU_PLAYER_Y);
             call PasteBob(player_bob, MENU_PLAYER_X, MENU_PLAYER_Y, 1);
 
-            call Text(20, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
-            call Text(16, 48, &menu_high_text, HUD_TEXT_COLOR_IDX);
-            call Text(4, 210, &menu_start_text, HUD_TEXT_COLOR_IDX);
+            call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
+            call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX);
+            call Text(40/2-10/2, 21, &menu_start_text, HUD_TEXT_COLOR_IDX);
 
-            call WaitVBlank();
+            call WaitFrame();
             call Show();
 
             rocket_x = rocket_x + MENU_ROCKET_STEP;
@@ -1443,7 +1502,7 @@ main:
             q = v / 10;
             rem = v - (q * 10);
             digit = hud_digit_chars[rem];
-            hud_line_text[35 + idx] = digit;
+            hud_line_text[36 + idx] = digit;
             v = q;
         }
     }
@@ -1472,8 +1531,7 @@ main:
             if(shown_lives < 0) { shown_lives = 0; }
             if(shown_lives > 9) { shown_lives = 9; }
             lives_digit = hud_digit_chars[shown_lives];
-            hud_line_text[20] = lives_digit;
-            hud_line_text[22] = 76;
+            hud_line_text[18] = lives_digit;
             hud_line_text[23] = hud_digit_chars[current_level];
 
             hud_prev_score = current_score;
@@ -1569,9 +1627,6 @@ main:
         call RefreshLevelBuffersIfDirty();
         call update_hud_state();
         call InitKeyboard();
-
-        // Scatter the initial star field on the current video buffer.
-        call _stars_init(gfx_current_screen_ptr);
 
         return 0;
     }
@@ -1732,6 +1787,9 @@ main:
             return -1;
         }
 
+        // Scatter the initial star field on the current video buffer.
+        call _stars_init(gfx_current_screen_ptr);
+
         if(run_title_menu() == 0)
         {
             return 0;
@@ -1756,22 +1814,14 @@ main:
         level_completed = 0;
 
         call prime_level_buffers(player_bob_right, player_bob_right_b);
-
-        call PlayMusic(0);
+        call SwitchMusic(0);
 
         while (run == 1)
         {
             key = GetKey();
-            if(key == KEY_ESC)
+            if(key == KEY_F1)
             {
-                run = 0;
-            }
-            else
-            {
-                if(key == KEY_F1)
-                {
-                    level_completed = 1;
-                }
+                level_completed = 1;
             }
 
             call SwapScreen();
@@ -1802,7 +1852,7 @@ main:
                 prev_bob_a = draw_bob;
             }
 
-            call WaitVBlank();
+            call WaitFrame();
             call Show();
 
             if(level_completed)
@@ -1824,13 +1874,13 @@ main:
                 screen = 1;
 
                 call prime_level_buffers(prev_bob_a, prev_bob_b);
-                call PlayMusic(0);
             }
 
             if (player_dead != 0)
             {
-                call SwitchMusic(1);
-                if (player_die() != 0)
+                call PlaySoundEffect(SFX_PLAYER_DEATH);
+
+                if (player_die() == 1)
                 {
                     if(run_title_menu() == 0)
                     {
@@ -1907,6 +1957,8 @@ main:
                         call CreateMap(current_level);
                         call RefreshLevelBuffersIfDirty();
                         call update_hud_state();
+                        call _stars_init(gfx_current_screen_ptr);
+                        call SwitchMusic(0);
 
                         prev_x_a = player_x;
                         prev_y_a = player_y;
@@ -1918,7 +1970,6 @@ main:
                         screen = 1;
 
                         call prime_level_buffers(prev_bob_a, prev_bob_b);
-                        call PlayMusic(0);
                     }
                 }
                 else
@@ -1938,7 +1989,6 @@ main:
                     screen = 1;
 
                     call prime_level_buffers(prev_bob_a, prev_bob_b);
-                    call SwitchMusic(0);
                 }
             }
         }
@@ -2057,7 +2107,7 @@ main:
             call CopyLevelBuffer();
             call PasteBob(stand_bob, player_x, player_y, 1);
             call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
-            call WaitVBlank();
+            call WaitFrame();
             call Show();
         }
         vel_y = 0; player_y = player_y + 15;
@@ -2076,7 +2126,7 @@ main:
             call CopyLevelBuffer();
             call PasteBob(anim_bob, player_x, player_y, 1);
             call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
-            call WaitVBlank();
+            call WaitFrame();
             call Show();
 
             anim_timer = anim_timer + 1;
@@ -2152,8 +2202,8 @@ main:
             call SwapScreen();
             call CopyLevelBuffer();
             call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
-            call Text(112, 112, &game_over_text, HUD_TEXT_COLOR_IDX);
-            call WaitVBlank();
+            call Text(20-5, 22, &game_over_text, HUD_TEXT_COLOR_IDX);
+            call WaitFrame();
             call Show();
             wait_counter = wait_counter + 1;
         }
@@ -2210,7 +2260,7 @@ main:
             call SwapScreen();
             call CopyLevelBuffer();
             call PasteBob(rocket_bob_a, ROCKET_POS_X, rocket_y, 1);
-            call WaitVBlank();
+            call WaitFrame();
             call Show();
 
             if(rocket_dir < 0)
@@ -2236,7 +2286,7 @@ main:
         call SwapScreen();
         call CopyLevelBuffer();
         call PasteBob(rocket_bob_a, ROCKET_POS_X, ROCKET_POS_Y, 1);
-        call WaitVBlank();
+        call WaitFrame();
         call Show();
 
         current_level = next_level;
@@ -3417,11 +3467,11 @@ data main_data:
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
-    hud_line_text.b = "score: 0000  lives: 3  L1 hi: 0000 f: 000%", 0
-    menu_title_text.b = "ASTRONAUT JET PAC", 0
+    hud_line_text.b = "score:0000  lives:3 l:01  hi:0000 f:000%", 0
+    menu_title_text.b = "astronaut jet pac", 0
     menu_high_text.b = "high score: 0000", 0
-    game_over_text.b = "GAME OVER", 0
-    menu_start_text.b = "press fire or any key to launch", 0
+    game_over_text.b = "game over", 0
+    menu_start_text.b = "press fire", 0
 
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]

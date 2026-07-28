@@ -13,14 +13,21 @@ extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
 extern func ReadMouse() -> void;
 extern func GetMouseLBtn() -> int;
-extern var frontpage_ham6_dummy:int;
-extern var frontpage_ham6_palette:int;
+extern var pic_jetpac:int;
+extern var pic_jetpac_palette:int;
 
 const KEY_ESC = 69;
 
 code frontpage:
 
     public main;
+
+    asm {
+main:
+        jsr TakeSystem
+        jsr frontpage_run
+        jmp ReleaseSystem
+    }
 
     proc frontpage_run() -> int {
         var result:int;
@@ -31,13 +38,11 @@ code frontpage:
             return -1;
         }
 
-        call ClearScreen();
-        call LoadPalette(&frontpage_ham6_palette, 16);
-        call ShowPicture(&frontpage_ham6_dummy);
-        call UpdateCopperList();
-        call SwapScreen();
-
         call InitKeyboard();
+        call ClearScreen();
+        call LoadPalette(&pic_jetpac_palette, 16);
+        call ShowPicture(&pic_jetpac);
+        call UpdateCopperList();
 
         while (1)
         {
@@ -56,19 +61,4 @@ code frontpage:
         }
 
         return 0;
-    }
-
-    asm {
-main:
-        jsr TakeSystem
-        jsr frontpage_run
-        jmp ReleaseSystem
-
-; Placeholder HAM6 picture data (320x256x6bpp = 61440 bytes).
-; Replace this label later with imported HAM6 data include.
-frontpage_ham6_palette:
-    dcb.w 16,$000
-
-frontpage_ham6_dummy:
-        dcb.b 61440,0
     }

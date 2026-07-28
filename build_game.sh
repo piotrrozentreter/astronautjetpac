@@ -360,6 +360,29 @@ if ! "$PYTHON" -c 'import hasc.cli' &>/dev/null; then
     fi
 fi
 
+    # Fail fast with a clear dependency hint before launching hasc proper.
+    if [[ -n "$HASC_PYTHONPATH" ]]; then
+        if ! PYTHONPATH="$HASC_PYTHONPATH${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -c 'import lark' &>/dev/null; then
+            echo "ERROR: Missing Python dependency 'lark' for hasc ($PYTHON)." >&2
+            if [[ -f "$ROOT/requirements-hasc.txt" ]]; then
+                echo "Run: $PYTHON -m pip install -r $ROOT/requirements-hasc.txt" >&2
+            else
+                echo "Run: $PYTHON -m pip install lark" >&2
+            fi
+            exit 1
+        fi
+    else
+        if ! "$PYTHON" -c 'import lark' &>/dev/null; then
+            echo "ERROR: Missing Python dependency 'lark' for hasc ($PYTHON)." >&2
+            if [[ -f "$ROOT/requirements-hasc.txt" ]]; then
+                echo "Run: $PYTHON -m pip install -r $ROOT/requirements-hasc.txt" >&2
+            else
+                echo "Run: $PYTHON -m pip install lark" >&2
+            fi
+            exit 1
+        fi
+    fi
+
 if [[ -n "$HASC_PYTHONPATH" ]]; then
     (cd "$SRC_DIR" && PYTHONPATH="$HASC_PYTHONPATH${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m hasc.cli "$SRC_FILE" -o "$OUT_S")
 else
