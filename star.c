@@ -50,21 +50,25 @@ static u8  star_color[NUM_STARS];
  * screen : base of the video buffer (gfx_current_screen_ptr)
  * x, y   : pixel coordinates (0-based)
  * color  : colour register index 0-31 (0 = background / erase)
+ *
+ * Inlined and unrolled for performance (5 bitplanes fixed).
  */
-static void plot_pixel(u8 *screen, u16 x, u16 y, u8 color)
+static inline void plot_pixel(u8 *screen, u16 x, u16 y, u8 color)
 {
-    /* byte offset to the first plane's byte for this pixel */
     int byte_off = (int)y * ROW_STRIDE + (int)(x >> 3);
-    u8  bit_mask = (u8)(0x80u >> (x & 7u));
-    int p;
+    u8  bit_mask = 0x80u >> (x & 7u);
+    u8 *bp = screen + byte_off;
 
-    for (p = 0; p < NUM_PLANES; p++) {
-        u8 *bp = screen + byte_off + p * BYTES_PER_ROW;
-        if (color & (u8)(1u << p))
-            *bp |= bit_mask;
-        else
-            *bp &= (u8)(~bit_mask);
-    }
+    /* Unrolled bitplane loop (NUM_PLANES = 5) */
+    if (color & 1)  *bp |= bit_mask; else *bp &= ~bit_mask;
+    bp += BYTES_PER_ROW;
+    if (color & 2)  *bp |= bit_mask; else *bp &= ~bit_mask;
+    bp += BYTES_PER_ROW;
+    if (color & 4)  *bp |= bit_mask; else *bp &= ~bit_mask;
+    bp += BYTES_PER_ROW;
+    if (color & 8)  *bp |= bit_mask; else *bp &= ~bit_mask;
+    bp += BYTES_PER_ROW;
+    if (color & 16) *bp |= bit_mask; else *bp &= ~bit_mask;
 }
 
 /* ---- Public API ---------------------------------------------------------- */
