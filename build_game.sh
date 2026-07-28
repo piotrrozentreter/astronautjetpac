@@ -4,11 +4,12 @@
 #   .has -> .s (hasc) -> .o (vasm) -> .exe (vlink)
 #
 # Usage:
-#   ./build_game.sh <game_source.has> [output_name]
+#   ./build_game.sh <game_source.has|all> [output_name]
 #
 # Examples:
 #   ./build_game.sh jetpac.has
 #   ./build_game.sh path/to/game.has custom_name
+#   ./build_game.sh all
 #
 # Environment overrides:
 #   HASC_PYTHON=/path/to/python        Python used for hasc (default: auto)
@@ -62,11 +63,12 @@ fi
 
 usage() {
     cat <<'EOF'
-Usage: ./build_game.sh <game_source.has> [output_name]
+Usage: ./build_game.sh <game_source.has|all> [output_name]
 
 Examples:
     ./build_game.sh jetpac.has
     ./build_game.sh path/to/game.has custom_name
+    ./build_game.sh all
 EOF
 }
 
@@ -77,6 +79,15 @@ fi
 
 INPUT="$1"
 OUT_NAME="${2:-}"
+
+if [[ "$INPUT" == "all" ]]; then
+    for module in jetpac.has frontpage.has; do
+        echo "=== Building module: $module ==="
+        "$0" "$module"
+    done
+    echo "All modules built successfully."
+    exit 0
+fi
 
 if [[ -f "$INPUT" ]]; then
     SRC="$(cd "$(dirname "$INPUT")" && pwd)/$(basename "$INPUT")"

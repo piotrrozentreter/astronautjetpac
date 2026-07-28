@@ -1,9 +1,24 @@
 param(
     [string]$Source = "jetpac.has",
-    [string]$OutputName = ""
+    [string]$OutputName = "",
+    [switch]$AllModules
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($AllModules -or $Source -eq "all") {
+    $ScriptPath = $MyInvocation.MyCommand.Path
+    $Modules = @("jetpac.has", "frontpage.has")
+    foreach ($module in $Modules) {
+        Write-Host "=== Building module: $module ==="
+        & $ScriptPath -Source $module
+        if ($LASTEXITCODE -ne 0) {
+            throw "Build failed for module $module with exit code $LASTEXITCODE"
+        }
+    }
+    Write-Host "All modules built successfully."
+    return
+}
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = $ScriptDir
