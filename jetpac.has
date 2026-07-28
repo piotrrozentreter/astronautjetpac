@@ -187,6 +187,12 @@ const MAX_LEVELS = 5;
 const DEATH_ANIM_FRAMES = 5;      // frames in dead-l/dead-r animation
 const DEATH_ANIM_RATE   = 4;      // VBlanks per death animation cel
 const DEATH_WAIT_FRAMES = 100;    // ~3 s at 50 Hz PAL
+const MENU_ROCKET_START_X = 0;
+const MENU_ROCKET_Y = 72;
+const MENU_ROCKET_STEP = 2;
+const MENU_ROCKET_MAX_X = 256;
+const MENU_PLAYER_X = 128;
+const MENU_PLAYER_Y = 168;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -679,6 +685,15 @@ main:
             add_pts = SCORE_FOR_KILLING * lvl;
             current_score = current_score + add_pts;
             if(current_score > high_score) { high_score = current_score; }
+
+            while(current_score >= bonus_life_next_score)
+            {
+                if(current_lives < 9)
+                {
+                    current_lives = current_lives + 1;
+                }
+                bonus_life_next_score = bonus_life_next_score + 500;
+            }
 
             return 1;
         }
@@ -1262,6 +1277,94 @@ main:
         }
     }
 
+    proc menu_write_high(value:int) -> void {
+        var i:int;
+        var idx:int;
+        var q:int;
+        var rem:int;
+        var v:int;
+        var digit:byte;
+
+        v = value;
+        if(v > 9999) { v = 9999; }
+
+        for i = 0 to 3
+        {
+            idx = 3 - i;
+            q = v / 10;
+            rem = v - (q * 10);
+            digit = hud_digit_chars[rem];
+            menu_high_text[12 + idx] = digit;
+            v = q;
+        }
+    }
+
+    proc run_title_menu() -> int {
+        var key:byte;
+        var fire_btn:u8;
+        var screen:int;
+        var rocket_x:int;
+        var rocket_bob:int;
+        var player_bob:int;
+
+        call menu_write_high(high_score);
+
+        screen = 0;
+        rocket_x = MENU_ROCKET_START_X;
+
+        while (1)
+        {
+            key = GetKey();
+            if(key == KEY_ESC)
+            {
+                return 0;
+            }
+
+            fire_btn = ReadJoystickFire();
+            if((key != 0) || (fire_btn != 0))
+            {
+                return 1;
+            }
+
+            call SwapScreen();
+            call ClearScreen();
+            call _stars_animate(gfx_current_screen_ptr);
+
+            if(screen == 0)
+            {
+                rocket_bob = rocket_bob_a;
+                player_bob = player_bob_left;
+                screen = 1;
+            }
+            else
+            {
+                rocket_bob = rocket_bob_b;
+                player_bob = player_bob_right;
+                screen = 0;
+            }
+
+            call GetBobBackground(rocket_bob, rocket_x, MENU_ROCKET_Y);
+            call PasteBob(rocket_bob, rocket_x, MENU_ROCKET_Y, 1);
+            call GetBobBackground(player_bob, MENU_PLAYER_X, MENU_PLAYER_Y);
+            call PasteBob(player_bob, MENU_PLAYER_X, MENU_PLAYER_Y, 1);
+
+            call Text(20, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
+            call Text(16, 48, &menu_high_text, HUD_TEXT_COLOR_IDX);
+            call Text(4, 210, &menu_start_text, HUD_TEXT_COLOR_IDX);
+
+            call WaitVBlank();
+            call Show();
+
+            rocket_x = rocket_x + MENU_ROCKET_STEP;
+            if(rocket_x > MENU_ROCKET_MAX_X)
+            {
+                rocket_x = MENU_ROCKET_START_X;
+            }
+        }
+
+        return 0;
+    }
+
     proc hud_write_fuel(value:int) -> void {
         var i:int;
         var idx:int;
@@ -1293,6 +1396,7 @@ main:
         hud_changed = 0;
         if(current_score != hud_prev_score) { hud_changed = 1; }
         if(high_score != hud_prev_high_score) { hud_changed = 1; }
+        if(current_level != hud_prev_level) { hud_changed = 1; }
         if(current_lives != hud_prev_lives) { hud_changed = 1; }
         if(rocket_fuel != hud_prev_fuel) { hud_changed = 1; }
         if(hud_force_redraw != 0) { hud_changed = 1; }
@@ -1307,9 +1411,12 @@ main:
             if(shown_lives > 9) { shown_lives = 9; }
             lives_digit = hud_digit_chars[shown_lives];
             hud_line_text[20] = lives_digit;
+            hud_line_text[22] = 76;
+            hud_line_text[23] = hud_digit_chars[current_level];
 
             hud_prev_score = current_score;
             hud_prev_high_score = high_score;
+            hud_prev_level = current_level;
             hud_prev_lives = current_lives;
             hud_prev_fuel = rocket_fuel;
             hud_dirty_a = 1;
@@ -1424,6 +1531,20 @@ main:
         {
             return -1;
         }
+
+        if(run_title_menu() == 0)
+        {
+            return 0;
+        }
+
+        current_level = 1;
+        current_lives = 3;
+        current_score = 0;
+        bonus_life_next_score = 500;
+        hud_force_redraw = 1;
+        call CreateMap(current_level);
+        call RefreshLevelBuffersIfDirty();
+        call update_hud_state();
 
         // Prime both buffers with map + player so first shown frame is stable.
         prev_x_a = player_x;
@@ -3080,8 +3201,10 @@ data main_data:
     current_lives.b = 3
     current_score.l = 0
     high_score.l = 0
+    bonus_life_next_score.l = 500
     hud_prev_score.l = 0
     hud_prev_high_score.l = 0
+    hud_prev_level.b = 0
     hud_prev_lives.b = 0
     hud_prev_fuel.b = 0
     hud_dirty_a.b = 0
@@ -3117,7 +3240,10 @@ data main_data:
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
-    hud_line_text.b = "score: 0000  lives: 3  hi: 0000 f: 000%", 0
+    hud_line_text.b = "score: 0000  lives: 3  L1 hi: 0000 f: 000%", 0
+    menu_title_text.b = "ASTRONAUT JET PAC", 0
+    menu_high_text.b = "high score: 0000", 0
+    menu_start_text.b = "press fire or any key to launch", 0
 
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]
