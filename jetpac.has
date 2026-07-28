@@ -246,11 +246,18 @@ main:
         }
     }
 
-    proc PlayMusic() -> void {
+    proc PlayMusic(track_id: int) -> void {
         asm {
 ; plays pro-tracker music
             movem.l a6,-(sp)
-            lea music,a0
+            move.l     8(a6),d0
+            cmpi.l     #1,d0
+            beq.s      .play_music1
+            lea        music,a0
+            bra.s      .music_ready
+.play_music1:
+            lea        music1,a0
+.music_ready:
             lea        $DFF000,a6
             move.l     #0,a1
             move.b     #0,d0
@@ -259,9 +266,38 @@ main:
 
 ; sets master volume for music
             lea        $DFF000,a6
-            move.w     #12,d0
+            move.w     #14,d0
             jsr        _mt_mastervol
             movem.l (sp)+,a6
+        }
+    }
+
+    proc SwitchMusic(track_id: int) -> void {
+        asm {
+; stops current replay and starts another track without removing CIA music interrupt
+            movem.l    d0/a0/a1/a6,-(sp)
+            move.l     8(a6),d0
+            move.b     #0,_mt_Enable
+
+            lea        $DFF000,a6
+            jsr        _mt_end
+
+            cmpi.l     #1,d0
+            beq.s      .switch_music1
+            lea        music,a0
+            bra.s      .switch_music_ready
+.switch_music1:
+            lea        music1,a0
+.switch_music_ready:
+            move.l     #0,a1
+            move.b     #0,d0
+            jsr        _mt_init
+            move.b     #1,_mt_Enable
+
+; keeps same master volume as PlayMusic
+            move.w     #14,d0
+            jsr        _mt_mastervol
+            movem.l    (sp)+,d0/a0/a1/a6
         }
     }
 
@@ -1410,7 +1446,7 @@ main:
         call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
         call draw_hud_on_current_screen(1);
 
-        call PlayMusic();
+        call PlayMusic(0);
 
         while (run == 1)
         {
@@ -1582,11 +1618,12 @@ main:
                 call PasteBob(prev_bob_b, player_x, player_y, 1);
                 call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
                 call draw_hud_on_current_screen(1);
-                call PlayMusic();
+                call PlayMusic(0);
             }
 
             if (player_dead != 0)
             {
+                call SwitchMusic(1);
                 if (player_die() != 0)
                 {
                     run = 0;
@@ -1618,7 +1655,7 @@ main:
                     call PasteBob(prev_bob_b, player_x, player_y, 1);
                     call PasteBob(rocket_bob_b, ROCKET_POS_X, ROCKET_POS_Y, 1);
                     call draw_hud_on_current_screen(1);
-                    call PlayMusic();
+                    call SwitchMusic(0);
                 }
             }
         }
@@ -1833,8 +1870,6 @@ main:
         var next_level:int;
         var transition_done:byte;
 
-        QuitSound();
-        
         for i = 0 to MAX_METEORS - 1
         {
             meteor_active[i] = 0;
@@ -1866,6 +1901,8 @@ main:
 
         next_level = current_level + 1;
         if(next_level > MAX_LEVELS) { next_level = 1; }
+
+        call SwitchMusic(1);
 
         rocket_y = ROCKET_POS_Y;
         rocket_dir = -1;
@@ -1911,8 +1948,7 @@ main:
         call RefreshLevelBuffersIfDirty();
         call update_hud_state();
 
-        call InitSound();
-        call PlayMusic();
+        call SwitchMusic(0);
     }
 
 
