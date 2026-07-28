@@ -245,7 +245,7 @@ try {
     Set-Location $oldLocation
 }
 
-$VasmArgs = @("-m68000", "-Fhunk", "-kick1hunks", "-nowarn=62", "-I", $LibDir)
+$VasmArgs = @("-m68000", "-Fhunk", "-kick1hunks", "-nowarn=62", "-quiet", "-I", $LibDir)
 & $Vasm @VasmArgs $OutS "-o" $OutO
 if ($LASTEXITCODE -ne 0) {
     throw "Assembly of main source failed with exit code $LASTEXITCODE"
@@ -289,7 +289,7 @@ if (Test-Path $StarC) {
     }
     # Assemble the generated source; skip -kick1hunks to stay compatible with
     # the opt/idnt directives that vbccm68k emits, add -nowarn=62 as per vbcc config.
-    $VbccVasmArgs = @("-m68000", "-Fhunk", "-nowarn=62", "-I", $LibDir)
+    $VbccVasmArgs = @("-m68000", "-Fhunk", "-nowarn=62", "-quiet", "-I", $LibDir)
     & $Vasm @VbccVasmArgs $StarS "-o" $StarO
     if ($LASTEXITCODE -ne 0) {
         throw "Assembly of star_c.s failed with exit code $LASTEXITCODE"
