@@ -6,7 +6,7 @@ SFX_VOLUME      equ 32
 
 
 ; sound effects priorities (higher value -> higher priority)
-SFX_PRI_LASER       equ 127
+SFX_PRI_LASER       equ 129
 SFX_PRI_EXPLOSION   equ 126
 SFX_PRI_FUEL        equ 125
 SFX_PRI_JET         equ 128

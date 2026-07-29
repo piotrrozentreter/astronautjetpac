@@ -192,7 +192,9 @@ const MENU_ROCKET_START_X = 0;
 const MENU_ROCKET_Y = 72;
 const MENU_ROCKET_STEP = 2;
 const MENU_ROCKET_MAX_X = 256;
-const MENU_PLAYER_X = 128+18;
+const MENU_PLAYER_MIN_X = 32;
+const MENU_PLAYER_MAX_X = 272;
+const MENU_PLAYER_STEP = 2;
 const MENU_PLAYER_Y = 168+10;
 
     public CreateMap;
@@ -1374,30 +1376,24 @@ main:
     proc run_title_menu() -> int {
         var key:byte;
         var fire_btn:u8;
-        var wait_release:byte;
-        var wait_release_frames:int;
         var screen:int;
         var rocket_x:int;
         var rocket_bob:int;
         var player_bob:int;
+        var pl_wait:int = 6;
+        var player_x:int;
+        var player_dir:int;
+        var player_frame:int;
 
         call QuitSound();
-
-        // Guard against a stuck/noisy fire input: require a release before start,
-        // but never block the menu transition.
-        wait_release = 0;
-        key = GetKey();
-        fire_btn = ReadJoystickFire();
-        if((key != 0) || (fire_btn != 0))
-        {
-            wait_release = 1;
-            wait_release_frames = 75;
-        }
-
         call menu_write_high(high_score);
 
         screen = 0;
         rocket_x = MENU_ROCKET_START_X;
+        player_x = MENU_PLAYER_MIN_X;
+        player_dir = 1;
+        player_frame = 0;
+        player_bob = asset_handles[48];
 
         while (1)
         {
@@ -1408,25 +1404,7 @@ main:
             }
 
             fire_btn = ReadJoystickFire();
-            if(wait_release != 0)
-            {
-                if((key == 0) && (fire_btn == 0))
-                {
-                    wait_release = 0;
-                }
-                else
-                {
-                    if(wait_release_frames > 0)
-                    {
-                        wait_release_frames = wait_release_frames - 1;
-                    }
-                    if(wait_release_frames == 0)
-                    {
-                        wait_release = 0;
-                    }
-                }
-            }
-            else if((key != 0) || (fire_btn != 0))
+            if(fire_btn != 0)
             {
                 return 1;
             }
@@ -1438,20 +1416,34 @@ main:
             if(screen == 0)
             {
                 rocket_bob = rocket_bob_a;
-                player_bob = player_bob_left;
+                if(player_dir > 0)
+                {
+                    player_bob = asset_handles[48 + player_frame];
+                }
+                else
+                {
+                    player_bob = asset_handles[42 + player_frame];
+                }
                 screen = 1;
             }
             else
             {
                 rocket_bob = rocket_bob_b;
-                player_bob = player_bob_right;
+                if(player_dir > 0)
+                {
+                    player_bob = walk_right_bobs_b[player_frame];
+                }
+                else
+                {
+                    player_bob = walk_left_bobs_b[player_frame];
+                }
                 screen = 0;
             }
 
             call GetBobBackground(rocket_bob, rocket_x, MENU_ROCKET_Y);
             call PasteBob(rocket_bob, rocket_x, MENU_ROCKET_Y, 1);
-            call GetBobBackground(player_bob, MENU_PLAYER_X, MENU_PLAYER_Y);
-            call PasteBob(player_bob, MENU_PLAYER_X, MENU_PLAYER_Y, 1);
+            call GetBobBackground(player_bob, player_x, MENU_PLAYER_Y);
+            call PasteBob(player_bob, player_x, MENU_PLAYER_Y, 1);
 
             call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
             call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX);
@@ -1464,6 +1456,29 @@ main:
             if(rocket_x > MENU_ROCKET_MAX_X)
             {
                 rocket_x = MENU_ROCKET_START_X;
+            }
+
+            pl_wait = pl_wait - 1;
+            if(pl_wait <= 0)
+            {
+                pl_wait = 6;
+                player_frame = player_frame + 1;
+                if(player_frame >= WALK_ANIM_FRAMES)
+                {
+                    player_frame = 0;
+                }
+            }
+
+            player_x = player_x + (player_dir * MENU_PLAYER_STEP);
+            if(player_x >= MENU_PLAYER_MAX_X)
+            {
+                player_x = MENU_PLAYER_MAX_X;
+                player_dir = -1;
+            }
+            else if(player_x <= MENU_PLAYER_MIN_X)
+            {
+                player_x = MENU_PLAYER_MIN_X;
+                player_dir = 1;
             }
         }
 
