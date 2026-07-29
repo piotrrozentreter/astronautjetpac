@@ -175,6 +175,7 @@ const ENERGY_SPAWN_DELAY_RANGE = 260;
 const ENERGY_VISIBLE_FRAMES = 500;   // 10 seconds at 50Hz
 const SCORE_FOR_KILLING = 5;
 const SCORE_FOR_ENERGY = 20;
+const FUEL_VOLUME = 20;                 // fuel units per pickup
 
 const SFX_LASER = 0;
 const SFX_EXPLOSION = 1;
@@ -974,7 +975,7 @@ main:
                 call PlaySoundEffect(SFX_FUEL_SET);
                 fuel_active = 0;
                 fuel_to_rocket = 0;
-                rocket_fuel = rocket_fuel + 10;
+                rocket_fuel = rocket_fuel + FUEL_VOLUME;
                 if (rocket_fuel >= 100)
                 {
                     rocket_fuel = 100;
@@ -1004,8 +1005,8 @@ main:
 
         if (fuel_active != 0 && fuel_falling == 0 && fuel_carried == 0 && fuel_to_rocket == 0)
         {
-            p_left = player_x;
-            p_right = player_x + PLAYER_BOB_W_M1;
+            p_left = player_x + 10;
+            p_right = player_x + PLAYER_BOB_W_M1 - 10;
             p_top = player_y;
             p_bottom = player_y + PLAYER_BOB_H_M1;
 
@@ -1447,9 +1448,10 @@ main:
             call GetBobBackground(player_bob, player_x, MENU_PLAYER_Y);
             call PasteBob(player_bob, player_x, MENU_PLAYER_Y, 1);
 
-            call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
             call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX);
-            call Text(40/2-10/2, 21, &menu_start_text, HUD_TEXT_COLOR_IDX);
+            call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
+            call Text(20-7, 20, &author_text, HUD_TEXT_COLOR_IDX);
+            call Text(40/2-10/2, 22, &menu_start_text, HUD_TEXT_COLOR_IDX);
 
             call WaitFrame();
             call Show();
@@ -1974,8 +1976,8 @@ main:
 
         if (player_dead != 0) { return; }
 
-        p_left   = player_x;
-        p_right  = player_x + PLAYER_BOB_W_M1;
+        p_left   = player_x + 10;
+        p_right  = player_x + PLAYER_BOB_W_M1 - 10;
         p_top    = player_y;
         p_bottom = player_y + PLAYER_BOB_H_M1;
 
@@ -3513,6 +3515,7 @@ data hud_strings:
     menu_title_text.b = "astronaut jet pac", 0
     menu_high_text.b = "high score: 0000", 0
     game_over_text.b = "game over", 0
+    author_text.b = "by: rozsoft 2026", 0
     menu_start_text.b = "press fire", 0
 
 bss bobs_bss:
