@@ -124,9 +124,9 @@ const WALK_ANIM_RATE = 4;
 const FLY_ANIM_FRAMES = 5;
 const FLY_ANIM_RATE = 4;
 const FIRE_STAND_ANIM_FRAMES = 5;
-const FIRE_STAND_ANIM_RATE = 3;
+const FIRE_STAND_ANIM_RATE = 2;
 const FIRE_FLY_ANIM_FRAMES = 5;
-const FIRE_FLY_ANIM_RATE = 3;
+const FIRE_FLY_ANIM_RATE = 2;
 const FIRE_LAND_COOLDOWN_FRAMES = 3;
 const GRAVITY = 1;
 const THRUST = 3;
@@ -507,7 +507,6 @@ main:
     proc update_player() -> void {
         var joy:u32;
         var is_walking:byte;
-        var is_moving:byte;
         var fire_btn:u8;
         var new_x:int;
         var new_y:int;
@@ -517,8 +516,6 @@ main:
         var was_grounded:byte;
         var now_grounded:byte;
         var landed_this_frame:byte;
-        var can_continue_fly:byte;
-        var can_continue_stand:byte;
 
         joy = ReadJoystick();
 
@@ -580,12 +577,6 @@ main:
         if(joy & JOY_LEFT)  { is_walking = 1; }
         if(joy & JOY_RIGHT) { is_walking = 1; }
 
-        is_moving = 0;
-        if(joy & JOY_LEFT)  { is_moving = 1; }
-        if(joy & JOY_RIGHT) { is_moving = 1; }
-        if(joy & JOY_UP)    { is_moving = 1; }
-        if(joy & JOY_DOWN)  { is_moving = 1; }
-
         if(is_walking)
         {
             walk_timer = walk_timer + 1;
@@ -626,52 +617,36 @@ main:
         }
 
         fire_btn = ReadJoystickFire();
+        player_grounded = now_grounded;
 
-        // Fire state machine:
-        // mode 1 = standing fire sequence, mode 2 = flying fire sequence,
-        // mode 3 = hold-fire while moving: keep last fire frame and keep shooting.
+        // Fire behaviour:
+        // mode 1 = grounded firing, mode 2 = airborne firing.
+        // Firing becomes active only once the animation reaches its last frame.
+        // Switching grounded/airborne mode cancels firing and restarts the sequence.
         player_firing = 0;
-        player_fire_mode = 0;
-        can_continue_fly = 0;
-        can_continue_stand = 0;
-
-        if(fire_fly_frame > 0)
+        if(fire_btn == 0)
         {
-            if(fire_fly_frame < (FIRE_FLY_ANIM_FRAMES - 1)) { can_continue_fly = 1; }
+            player_fire_mode = 0;
+            fire_stand_frame = 0;
+            fire_stand_timer = 0;
+            fire_fly_frame = 0;
+            fire_fly_timer = 0;
+            player_fire_ready = 0;
+            return;
         }
 
-        if(fire_stand_frame > 0)
+        if(now_grounded != 0)
         {
-            if(fire_stand_frame < (FIRE_STAND_ANIM_FRAMES - 1)) { can_continue_stand = 1; }
-        }
-
-        if(fire_btn != 0)
-        {
-            if(fire_land_cooldown_timer == 0)
+            if(player_fire_mode != 1)
             {
-                if(player_thrusting != 0 || can_continue_fly != 0)
-                {
-                    player_firing = 1;
-                    player_fire_mode = 2;
-                }
-                else if(is_walking == 0 || can_continue_stand != 0)
-                {
-                    player_firing = 1;
-                    player_fire_mode = 1;
-                }
-                else if(is_moving != 0)
-                {
-                    if(player_fire_ready != 0)
-                    {
-                        player_firing = 1;
-                        player_fire_mode = 3;
-                    }
-                }
+                player_fire_mode = 1;
+                fire_stand_frame = 0;
+                fire_stand_timer = 0;
+                fire_fly_frame = 0;
+                fire_fly_timer = 0;
+                player_fire_ready = 0;
             }
-        }
 
-        if(player_fire_mode == 1)
-        {
             fire_stand_timer = fire_stand_timer + 1;
             if(fire_stand_timer >= FIRE_STAND_ANIM_RATE)
             {
@@ -685,11 +660,28 @@ main:
             fire_fly_frame = 0;
             fire_fly_timer = 0;
 
-            if(fire_stand_frame >= (FIRE_STAND_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
-            else { player_fire_ready = 0; }
+            if(fire_stand_frame >= (FIRE_STAND_ANIM_FRAMES - 1))
+            {
+                player_fire_ready = 1;
+                player_firing = 1;
+            }
+            else
+            {
+                player_fire_ready = 0;
+            }
         }
-        else if(player_fire_mode == 2)
+        else
         {
+            if(player_fire_mode != 2)
+            {
+                player_fire_mode = 2;
+                fire_fly_frame = 0;
+                fire_fly_timer = 0;
+                fire_stand_frame = 0;
+                fire_stand_timer = 0;
+                player_fire_ready = 0;
+            }
+
             fire_fly_timer = fire_fly_timer + 1;
             if(fire_fly_timer >= FIRE_FLY_ANIM_RATE)
             {
@@ -703,23 +695,15 @@ main:
             fire_stand_frame = 0;
             fire_stand_timer = 0;
 
-            if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
-            else { player_fire_ready = 0; }
-        }
-        else if(player_fire_mode == 3)
-        {
-            // Keep whichever fire sequence reached its last frame.
-            player_fire_ready = 0;
-            if(fire_stand_frame >= (FIRE_STAND_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
-            if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1)) { player_fire_ready = 1; }
-        }
-        else
-        {
-            fire_stand_frame = 0;
-            fire_stand_timer = 0;
-            fire_fly_frame = 0;
-            fire_fly_timer = 0;
-            player_fire_ready = 0;
+            if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1))
+            {
+                player_fire_ready = 1;
+                player_firing = 1;
+            }
+            else
+            {
+                player_fire_ready = 0;
+            }
         }
     }
 
@@ -1638,86 +1622,48 @@ main:
 
         if(use_b != 0)
         {
-            if(player_thrusting != 0)
+            if(player_fire_mode == 2)
             {
-                if(player_fire_mode == 2)
-                {
-                    if(player_face_right == 1) { draw_bob = fire_fly_right_bobs_b[fire_fly_frame]; }
-                    else { draw_bob = fire_fly_left_bobs_b[fire_fly_frame]; }
-                }
-                else
-                {
-                    if(player_face_right == 1) { draw_bob = fly_right_bobs_b[fly_frame]; }
-                    else { draw_bob = fly_left_bobs_b[fly_frame]; }
-                }
+                if(player_face_right == 1) { draw_bob = fire_fly_right_bobs_b[fire_fly_frame]; }
+                else { draw_bob = fire_fly_left_bobs_b[fire_fly_frame]; }
+            }
+            else if(player_fire_mode == 1)
+            {
+                if(player_face_right == 1) { draw_bob = fire_stand_right_bobs_b[fire_stand_frame]; }
+                else { draw_bob = fire_stand_left_bobs_b[fire_stand_frame]; }
+            }
+            else if(player_grounded == 0)
+            {
+                if(player_face_right == 1) { draw_bob = fly_right_bobs_b[fly_frame]; }
+                else { draw_bob = fly_left_bobs_b[fly_frame]; }
             }
             else
             {
-                if(player_fire_mode == 1)
-                {
-                    if(player_face_right == 1) { draw_bob = fire_stand_right_bobs_b[fire_stand_frame]; }
-                    else { draw_bob = fire_stand_left_bobs_b[fire_stand_frame]; }
-                }
-                else if(player_fire_mode == 3)
-                {
-                    if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1))
-                    {
-                        if(player_face_right == 1) { draw_bob = fire_fly_right_bobs_b[FIRE_FLY_ANIM_FRAMES - 1]; }
-                        else { draw_bob = fire_fly_left_bobs_b[FIRE_FLY_ANIM_FRAMES - 1]; }
-                    }
-                    else
-                    {
-                        if(player_face_right == 1) { draw_bob = fire_stand_right_bobs_b[FIRE_STAND_ANIM_FRAMES - 1]; }
-                        else { draw_bob = fire_stand_left_bobs_b[FIRE_STAND_ANIM_FRAMES - 1]; }
-                    }
-                }
-                else
-                {
-                    if(player_face_right == 1) { draw_bob = walk_right_bobs_b[walk_frame]; }
-                    else { draw_bob = walk_left_bobs_b[walk_frame]; }
-                }
+                if(player_face_right == 1) { draw_bob = walk_right_bobs_b[walk_frame]; }
+                else { draw_bob = walk_left_bobs_b[walk_frame]; }
             }
         }
         else
         {
-            if(player_thrusting != 0)
+            if(player_fire_mode == 2)
             {
-                if(player_fire_mode == 2)
-                {
-                    if(player_face_right == 1) { idx = 26 + fire_fly_frame; }
-                    else { idx = 16 + fire_fly_frame; }
-                }
-                else
-                {
-                    if(player_face_right == 1) { idx = 21 + fly_frame; }
-                    else { idx = 11 + fly_frame; }
-                }
+                if(player_face_right == 1) { idx = 26 + fire_fly_frame; }
+                else { idx = 16 + fire_fly_frame; }
+            }
+            else if(player_fire_mode == 1)
+            {
+                if(player_face_right == 1) { idx = 5 + fire_stand_frame; }
+                else { idx = 0 + fire_stand_frame; }
+            }
+            else if(player_grounded == 0)
+            {
+                if(player_face_right == 1) { idx = 21 + fly_frame; }
+                else { idx = 11 + fly_frame; }
             }
             else
             {
-                if(player_fire_mode == 1)
-                {
-                    if(player_face_right == 1) { idx = 5 + fire_stand_frame; }
-                    else { idx = 0 + fire_stand_frame; }
-                }
-                else if(player_fire_mode == 3)
-                {
-                    if(fire_fly_frame >= (FIRE_FLY_ANIM_FRAMES - 1))
-                    {
-                        if(player_face_right == 1) { idx = 26 + (FIRE_FLY_ANIM_FRAMES - 1); }
-                        else { idx = 16 + (FIRE_FLY_ANIM_FRAMES - 1); }
-                    }
-                    else
-                    {
-                        if(player_face_right == 1) { idx = 5 + (FIRE_STAND_ANIM_FRAMES - 1); }
-                        else { idx = 0 + (FIRE_STAND_ANIM_FRAMES - 1); }
-                    }
-                }
-                else
-                {
-                    if(player_face_right == 1) { idx = 48 + walk_frame; }
-                    else { idx = 42 + walk_frame; }
-                }
+                if(player_face_right == 1) { idx = 48 + walk_frame; }
+                else { idx = 42 + walk_frame; }
             }
             draw_bob = asset_handles[idx];
         }
@@ -3401,6 +3347,7 @@ data main_data:
     walk_timer.b = 0
     vel_y.l = 0
     player_thrusting.b = 0
+    player_grounded.b = 0
     player_jet_sound.b = 0
     fly_frame.b = 0
     fly_timer.b = 0

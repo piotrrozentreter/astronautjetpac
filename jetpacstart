@@ -1,0 +1,19 @@
+; $VER: jetpacstart 1.0 (29.07.2026)
+; Runs frontpage first, then launches the main game.
+
+FAILAT 21
+CD PROGDIR:
+
+IF EXISTS "frontpage"
+  ECHO "Running frontpage..."
+  frontpage
+ELSE
+  ECHO "frontpage not found in this drawer."
+ENDIF
+
+IF EXISTS "jetpac"
+  ECHO "Starting jetpac..."
+  jetpac
+ELSE
+  ECHO "jetpac not found in this drawer."
+ENDIF
