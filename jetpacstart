@@ -4,16 +4,16 @@
 FAILAT 21
 CD PROGDIR:
 
-IF EXISTS "frontpage"
-  ECHO "Running frontpage..."
-  frontpage
+IF EXISTS "frontpage.exe"
+  ECHO "Running frontpage.exe ..."
+  frontpage.exe
 ELSE
-  ECHO "frontpage not found in this drawer."
+  ECHO "frontpage.exe not found in this drawer."
 ENDIF
 
-IF EXISTS "jetpac"
-  ECHO "Starting jetpac..."
-  jetpac
+IF EXISTS "jetpac.exe"
+  ECHO "Starting jetpac.exe ..."
+  jetpac.exe
 ELSE
-  ECHO "jetpac not found in this drawer."
+  ECHO "jetpac.exe not found in this drawer."
 ENDIF

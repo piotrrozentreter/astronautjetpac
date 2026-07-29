@@ -112,12 +112,3 @@ void stars_animate(u8 *screen)
         plot_pixel(screen, star_x[i], star_y[i], star_color[i]); /* redraw */
     }
 }
-
-/*
- * Export alias symbols without the leading underscore that vbccm68k adds.
- * This allows HAS code to call  stars_init / stars_animate  directly via:
- *   extern func stars_init(screen: int) -> void;
- *   extern func stars_animate(screen: int) -> void;
- */
-#pragma alias stars_init _stars_init
-#pragma alias stars_animate _stars_animate
