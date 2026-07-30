@@ -1,4 +1,5 @@
 /*
+ * (c) 2026 by Rozsoft.
  * star.c - Star field for Amiga 320x256x5-bitplane line-interleaved screen.
  *
  * Screen layout (mode 0, SetGraphicsMode(0)):
