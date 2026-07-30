@@ -1383,7 +1383,10 @@ main:
         var fire_btn:u8;
         var screen:int;
         var rocket_x:int;
+        var rocket_y:int;
         var rocket_bob:int;
+        var rocket_dx:int;
+        var rocket_dy:int;
         var player_bob:int;
         var pl_wait:int = 6;
         var player_x:int;
@@ -1395,6 +1398,9 @@ main:
 
         screen = 0;
         rocket_x = MENU_ROCKET_START_X;
+        rocket_y = MENU_ROCKET_Y;
+        rocket_dx = MENU_ROCKET_STEP;
+        rocket_dy = 2;
         player_x = 320/2 - 17/2;
         player_dir = 1;
         player_frame = 0;
@@ -1445,8 +1451,8 @@ main:
                 screen = 0;
             }
 
-            call GetBobBackground(rocket_bob, rocket_x, MENU_ROCKET_Y);
-            call PasteBob(rocket_bob, rocket_x, MENU_ROCKET_Y, 1);
+            call GetBobBackground(rocket_bob, rocket_x, rocket_y);
+            call PasteBob(rocket_bob, rocket_x, rocket_y, 1);
             call GetBobBackground(player_bob, player_x, MENU_PLAYER_Y);
             call PasteBob(player_bob, player_x, MENU_PLAYER_Y, 1);
 
@@ -1458,10 +1464,28 @@ main:
             call WaitFrame();
             call Show();
 
-            rocket_x = rocket_x + MENU_ROCKET_STEP;
-            if(rocket_x > MENU_ROCKET_MAX_X)
+            rocket_x = rocket_x + rocket_dx;
+            if(rocket_x <= 0)
             {
-                rocket_x = MENU_ROCKET_START_X;
+                rocket_x = 0;
+                rocket_dx = -rocket_dx;
+            }
+            else if(rocket_x >= 320 - 64)
+            {
+                rocket_x = 320 - 64;
+                rocket_dx = -rocket_dx;
+            }
+
+            rocket_y = rocket_y + rocket_dy;
+            if(rocket_y <= 0)
+            {
+                rocket_y = 0;
+                rocket_dy = -rocket_dy;
+            }
+            else if(rocket_y >= 256 - 121)
+            {
+                rocket_y = 256 - 121;
+                rocket_dy = -rocket_dy;
             }
 
             pl_wait = pl_wait - 1;
