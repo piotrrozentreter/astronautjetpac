@@ -1,3 +1,5 @@
+// (c) 2026 by Rozsoft.
+
 #pragma lockreg(a5);
 
 extern func TakeSystem() -> void;
