@@ -1382,6 +1382,7 @@ main:
         var key:byte;
         var fire_btn:u8;
         var screen:int;
+        var use_b:byte;
         var rocket_x:int;
         var rocket_y:int;
         var rocket_bob:int;
@@ -1392,6 +1393,15 @@ main:
         var player_x:int;
         var player_dir:int;
         var player_frame:int;
+        var i:int;
+        var active_count:int;
+        var free_slot:int;
+        var menu_spawn_timer:int;
+        var rv:int;
+        var m_x:int;
+        var m_y:int;
+        var m_dir:int;
+        var m_bob:int;
 
         call QuitSound();
         call menu_write_high(high_score);
@@ -1405,6 +1415,18 @@ main:
         player_dir = 1;
         player_frame = 0;
         player_bob = asset_handles[48];
+        use_b = 0;
+        menu_spawn_timer = 0;
+
+        // Title screen uses first 5 meteor slots for decorative fly-bys.
+        for i = 0 to 4
+        {
+            meteor_active[i] = 0;
+            meteor_type[i] = ALIEN_TYPE_METEOR;
+            meteor_dir[i] = METEOR_DIR_LEFT;
+            meteor_x[i] = 0;
+            meteor_y[i] = 0;
+        }
 
         while (1)
         {
@@ -1427,6 +1449,7 @@ main:
             if(screen == 0)
             {
                 rocket_bob = rocket_bob_a;
+                use_b = 0;
                 if(player_dir > 0)
                 {
                     player_bob = asset_handles[48 + player_frame];
@@ -1440,6 +1463,7 @@ main:
             else
             {
                 rocket_bob = rocket_bob_b;
+                use_b = 1;
                 if(player_dir > 0)
                 {
                     player_bob = walk_right_bobs_b[player_frame];
@@ -1449,6 +1473,105 @@ main:
                     player_bob = walk_left_bobs_b[player_frame];
                 }
                 screen = 0;
+            }
+
+            if(menu_spawn_timer > 0)
+            {
+                menu_spawn_timer = menu_spawn_timer - 1;
+            }
+
+            active_count = 0;
+            free_slot = -1;
+            for i = 0 to 4
+            {
+                if(meteor_active[i] != 0)
+                {
+                    active_count = active_count + 1;
+                }
+                else if(free_slot < 0)
+                {
+                    free_slot = i;
+                }
+            }
+
+            if(menu_spawn_timer == 0)
+            {
+                if(active_count < 5 && free_slot >= 0)
+                {
+                    rv = prng_next();
+
+                    if((rv & 256) != 0)
+                    {
+                        meteor_dir[free_slot] = METEOR_DIR_RIGHT;
+                        meteor_x[free_slot] = METEOR_LEFT_START_X;
+                    }
+                    else
+                    {
+                        meteor_dir[free_slot] = METEOR_DIR_LEFT;
+                        meteor_x[free_slot] = METEOR_START_X;
+                    }
+
+                    meteor_type[free_slot] = ALIEN_TYPE_METEOR;
+                    meteor_y[free_slot] = 32 + ((rv >> 8) & 127);
+                    meteor_active[free_slot] = 1;
+                    menu_spawn_timer = 8 + ((rv >> 17) & 31);
+                }
+                else
+                {
+                    menu_spawn_timer = 6;
+                }
+            }
+
+            for i = 0 to 4
+            {
+                if(meteor_active[i] != 0)
+                {
+                    m_x = meteor_x[i];
+                    m_dir = meteor_dir[i];
+
+                    if(m_dir == METEOR_DIR_RIGHT)
+                    {
+                        m_x = m_x + METEOR_SPEED;
+                    }
+                    else
+                    {
+                        m_x = m_x - METEOR_SPEED;
+                    }
+
+                    if(m_x > METEOR_START_X || m_x < 0)
+                    {
+                        meteor_active[i] = 0;
+                    }
+                    else
+                    {
+                        meteor_x[i] = m_x;
+                    }
+                }
+            }
+
+            for i = 0 to 4
+            {
+                if(meteor_active[i] != 0)
+                {
+                    m_x = meteor_x[i];
+                    m_y = meteor_y[i];
+                    m_dir = meteor_dir[i];
+
+                    if(use_b != 0)
+                    {
+                        if(m_dir == METEOR_DIR_RIGHT) { m_bob = meteor_bobs_right_b[i]; }
+                        else                          { m_bob = meteor_bobs_b[i]; }
+                    }
+                    else
+                    {
+                        if(m_dir == METEOR_DIR_RIGHT) { m_bob = meteor_bobs_right_a[i]; }
+                        else                          { m_bob = meteor_bobs_a[i]; }
+                    }
+
+                    call patch_alien_bob(m_bob, ALIEN_TYPE_METEOR, m_dir);
+                    call GetBobBackground(m_bob, m_x, m_y);
+                    call PasteBob(m_bob, m_x, m_y, 1);
+                }
             }
 
             call GetBobBackground(rocket_bob, rocket_x, rocket_y);
