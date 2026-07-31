@@ -1884,7 +1884,7 @@ main:
 
     proc game_start() -> int {
         var run:bool = 1;
-        var key:byte;
+        //var key:byte;
         var screen:int = 1;
         var i:int;
         var rv:int;
@@ -1932,11 +1932,11 @@ main:
 
         while (run == 1)
         {
-            key = GetKey();
-            if(key == KEY_F1)
-            {
-                level_completed = 1;
-            }
+            // key = GetKey();
+            // if(key == KEY_F1)
+            // {
+            //     level_completed = 1;
+            // }
 
             call SwapScreen();
             // Animate stars on the newly active back buffer once per frame.
