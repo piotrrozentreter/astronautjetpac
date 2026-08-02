@@ -10,6 +10,8 @@ extern func SetColor(index:int, color:int) -> void;
 extern func HeapInit() -> void;
 extern func SetFont(font_ptr:int) -> int;
 extern func Text(x:int, y:int, string:int, color:int) -> int;
+extern func DrawGadget(gadget_ptr:int) -> int;
+extern func EditBoxPollKey(text_ptr:int, max_len:int, cursor_pos_ptr:int) -> int;
 
 extern func DebugSetEnabled(flag:int) -> void;
 extern func DebugClear() -> void;
@@ -225,8 +227,9 @@ const MENU_PLAYER_STEP = 2;
 const MENU_PLAYER_Y = 168+10;
 const MENU_VIEW_TITLE = 0;
 const MENU_VIEW_LADDER = 1;
-const MENU_TITLE_SHOW_FRAMES = 320;
-const MENU_LADDER_SHOW_FRAMES = 220;
+const MENU_TITLE_SHOW_FRAMES = 220;
+const MENU_LADDER_SHOW_FRAMES = 120;
+const GADGET_TYPE_EDITBOX = 2;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -256,6 +259,13 @@ main:
         asm {
             move.w (a0),d0
             ext.l d0
+        }
+    }
+
+    native proc peek_b(__reg(a0) a: long) -> byte {
+        asm {
+            moveq #0,d0
+            move.b (a0),d0
         }
     }
 
@@ -1508,7 +1518,8 @@ main:
         call QuitSound();
         if(highscore_needs_insert != 0)
         {
-            call highscore_insert_new_top(current_score);
+            call run_highscore_name_entry(current_score);
+            call highscore_insert_new_top(current_score, &highscore_entry_name);
             highscore_needs_insert = 0;
         }
         call menu_write_high(high_score);
@@ -1772,6 +1783,126 @@ main:
         return 0;
     }
 
+    proc highscore_entry_name_use_default() -> void {
+        var i:int;
+        var ch:byte;
+
+        for i = 0 to HIGHSCORE_NAME_STRIDE - 1
+        {
+            highscore_entry_name[i] = 0;
+        }
+
+        for i = 0 to HIGHSCORE_NAME_MAX - 1
+        {
+            ch = highscore_default_name[i];
+            highscore_entry_name[i] = ch;
+            if(ch == 0)
+            {
+                i = HIGHSCORE_NAME_MAX;
+            }
+        }
+
+        highscore_name_editbox_cursor = 0;
+        while(highscore_name_editbox_cursor < HIGHSCORE_NAME_MAX)
+        {
+            if(highscore_entry_name[highscore_name_editbox_cursor] == 0)
+            {
+                highscore_name_editbox_cursor = highscore_name_editbox_cursor;
+                return;
+            }
+            highscore_name_editbox_cursor = highscore_name_editbox_cursor + 1;
+        }
+    }
+
+    proc run_highscore_name_entry(score:int) -> void {
+        var key_rv:int;
+        var blink_timer:int;
+        var cursor_vis:int;
+
+        call highscore_entry_name_use_default();
+        highscore_name_editbox_textbuf = &highscore_entry_name;
+        highscore_name_editbox_type = GADGET_TYPE_EDITBOX;
+        highscore_name_editbox_maxlen = HIGHSCORE_NAME_MAX;
+        highscore_name_editbox_flags = 3;
+
+        call ladder_write_score_text(score);
+
+        blink_timer = 0;
+        cursor_vis = 1;
+
+        while(1)
+        {
+            key_rv = EditBoxPollKey(&highscore_entry_name, HIGHSCORE_NAME_MAX, &highscore_name_editbox_cursor);
+            if(key_rv == 2 || key_rv == 3)
+            {
+                if(highscore_entry_name[0] == 0)
+                {
+                    call highscore_entry_name_use_default();
+                }
+                return;
+            }
+
+            blink_timer = blink_timer + 1;
+            if(blink_timer >= 18)
+            {
+                blink_timer = 0;
+                if(cursor_vis != 0)
+                {
+                    cursor_vis = 0;
+                    highscore_name_editbox_flags = 1;
+                }
+                else
+                {
+                    cursor_vis = 1;
+                    highscore_name_editbox_flags = 3;
+                }
+            }
+
+            call SwapScreen();
+            call ClearScreen();
+            call _stars_animate(gfx_current_screen_ptr);
+            call Text(40/2-7, 8, &highscore_new_title_text, HUD_TEXT_COLOR_IDX);
+            call Text(40/2-7, 10, &highscore_new_prompt_text, HUD_TEXT_COLOR_IDX);
+            call Text(40/2-6, 13, &highscore_new_score_label_text, HUD_TEXT_COLOR_IDX);
+            call Text(40/2+4, 13, &ladder_score_text, HUD_TEXT_COLOR_IDX);
+            call DrawGadget(&highscore_name_editbox_x);
+            call Text(40/2-11, 20, &highscore_new_hint_text, HUD_TEXT_COLOR_IDX);
+            call WaitFrame();
+            call Show();
+        }
+    }
+
+    proc highscore_set_name(slot:int, name_ptr:long) -> void {
+        var base:int;
+        var i:int;
+        var ch:byte;
+
+        base = slot * HIGHSCORE_NAME_STRIDE;
+
+        for i = 0 to HIGHSCORE_NAME_STRIDE - 1
+        {
+            highscore_names[base + i] = 0;
+        }
+
+        for i = 0 to HIGHSCORE_NAME_MAX - 1
+        {
+            ch = peek_b(name_ptr + i);
+            if(ch == 0)
+            {
+                i = HIGHSCORE_NAME_MAX;
+            }
+            else
+            {
+                highscore_names[base + i] = ch;
+            }
+        }
+
+        if(highscore_names[base] == 0)
+        {
+            call highscore_set_default_name(slot);
+        }
+    }
+
     proc highscore_set_default_name(slot:int) -> void {
         var base:int;
         var i:int;
@@ -1913,7 +2044,7 @@ main:
         }
     }
 
-    proc highscore_insert_new_top(score:int) -> void {
+    proc highscore_insert_new_top(score:int, name_ptr:long) -> void {
         var i:int;
         var j:int;
         var insert_pos:int;
@@ -1958,7 +2089,7 @@ main:
         }
 
         highscore_scores[insert_pos] = score;
-        call highscore_set_default_name(insert_pos);
+        call highscore_set_name(insert_pos, name_ptr);
         high_score = highscore_scores[0];
     }
 
@@ -4086,6 +4217,10 @@ data hud_strings:
     author_text.b = "by: rozsoft 2026", 0
     menu_start_text.b = "press fire", 0
     ladder_title_text.b = "high score ladder", 0
+    highscore_new_title_text.b = "new high score!", 0
+    highscore_new_prompt_text.b = "enter your name", 0
+    highscore_new_score_label_text.b = "score:", 0
+    highscore_new_hint_text.b = "return=ok, esc=skip", 0
     ladder_rank_01.b = "01", 0
     ladder_rank_02.b = "02", 0
     ladder_rank_03.b = "03", 0
@@ -4101,6 +4236,22 @@ data hud_strings:
 data highscore_data:
     highscore_file_name.b = "highscore.txt", 0
     highscore_default_name.b = "player", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    highscore_entry_name.b = "player", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+data highscore_gui_data:
+    highscore_name_editbox_x.w = 116
+    highscore_name_editbox_y.w = 124
+    highscore_name_editbox_w.w = 88
+    highscore_name_editbox_h.w = 20
+    highscore_name_editbox_bg.w = 0
+    highscore_name_editbox_border.w = 1
+    highscore_name_editbox_textbuf.l = 0
+    highscore_name_editbox_tcolor.w = 1
+    highscore_name_editbox_type.w = 2
+    highscore_name_editbox_maxlen.w = 10
+    highscore_name_editbox_cursor.w = 6
+    highscore_name_editbox_flags.w = 3
+    highscore_name_editbox_aborder.w = 1
 
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]
