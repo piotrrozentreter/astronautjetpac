@@ -17,6 +17,9 @@ extern func DebugLogStr(msg:int) -> void;
 extern func DebugLogInt(value:int) -> void;
 extern func DebugFlushToDos() -> void;
 
+extern func TakeSystem() -> void;
+extern func ReleaseSystem() -> void;
+
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
 extern func ReadJoystick() -> u32;
@@ -31,6 +34,13 @@ extern func DestroyBob(handle:int) -> void;
 extern func GetBobBackground(handle:int, x:int, y:int) -> void;
 extern func PasteBackground(handle:int, x:int, y:int) -> void;
 extern func GetBobPalette(handle:int) -> int;
+
+extern func FileIoInit() -> int;
+extern func FileIoDone() -> int;
+extern func FileOpen(path:int, mode:int) -> int;
+extern func FileClose(handle:int) -> int;
+extern func FileRead(handle:int, buffer:int, length:int) -> int;
+extern func FileWrite(handle:int, buffer:int, length:int) -> int;
 
 extern var jetpack_tileset:int;
 extern var fonts:int;
@@ -117,6 +127,19 @@ const MAP_WIDTH = 20;
 const MAP_HEIGHT = 16;
 const TILE_WIDTH = 16;
 const TILE_HEIGHT = 16;
+
+const DOS_MODE_OLDFILE = 1005;
+const DOS_MODE_NEWFILE = 1006;
+const ASCII_COLON = 58;
+const ASCII_CR = 13;
+const ASCII_NL = 10;
+const ASCII_0 = 48;
+const HIGHSCORE_ENTRIES = 10;
+const HIGHSCORE_NAME_MAX = 10;
+const HIGHSCORE_NAME_STRIDE = 11;
+const HIGHSCORE_NAMES_BYTES = 110;
+const HIGHSCORE_FILE_MAX_BYTES = 256;
+const HIGHSCORE_MAX_VALUE = 9999;
 
 const MAX_COLORS = 32;
 const HUD_TEXT_COLOR_IDX = 1;
@@ -212,9 +235,15 @@ code main:
 
     asm {
 main:
+        jsr highscore_load_dos
         jsr TakeSystem
         jsr game_start
         jsr ReleaseSystem
+        ; pure DOS context here - no system switching needed
+        move.b highscore_dirty,d0
+        beq.s .no_hs_save
+        jsr highscore_save_dos
+.no_hs_save:
         jsr DebugFlushToDos
         rts
     }
@@ -712,7 +741,12 @@ main:
 
     proc add_score(points:int) -> void {
         current_score = current_score + points;
-        if(current_score > high_score) { high_score = current_score; }
+        if(current_score > high_score)
+        {
+            high_score = current_score;
+            highscore_dirty = 1;
+            highscore_needs_insert = 1;
+        }
 
         while(current_score >= bonus_life_next_score)
         {
@@ -1404,6 +1438,11 @@ main:
         var m_bob:int;
 
         call QuitSound();
+        if(highscore_needs_insert != 0)
+        {
+            call highscore_insert_new_top(high_score);
+            highscore_needs_insert = 0;
+        }
         call menu_write_high(high_score);
 
         screen = 0;
@@ -1636,6 +1675,273 @@ main:
         }
 
         return 0;
+    }
+
+    proc highscore_set_default_name(slot:int) -> void {
+        var base:int;
+        var i:int;
+
+        base = slot * HIGHSCORE_NAME_STRIDE;
+        for i = 0 to HIGHSCORE_NAME_STRIDE - 1
+        {
+            highscore_names[base + i] = highscore_default_name[i];
+        }
+    }
+
+    proc highscore_reset_defaults() -> void {
+        var i:int;
+
+        for i = 0 to HIGHSCORE_ENTRIES - 1
+        {
+            highscore_scores[i] = 0;
+            call highscore_set_default_name(i);
+        }
+        high_score = 0;
+    }
+
+    proc highscore_load_dos() -> int {
+        var handle:int;
+        var readn:int;
+        var pos:int;
+        var slot:int;
+        var base:int;
+        var name_len:int;
+        var ch:byte;
+        var score:int;
+
+        call highscore_reset_defaults();
+
+        if(FileIoInit() != 0)
+        {
+            return -1;
+        }
+
+        handle = FileOpen(&highscore_file_name, DOS_MODE_OLDFILE);
+        if(handle == 0)
+        {
+            call FileIoDone();
+            return -2;
+        }
+
+        readn = FileRead(handle, &highscore_io_buffer, HIGHSCORE_FILE_MAX_BYTES - 1);
+        call FileClose(handle);
+        call FileIoDone();
+
+        if(readn <= 0)
+        {
+            return -3;
+        }
+
+        highscore_io_buffer[readn] = 0;
+        pos = 0;
+        slot = 0;
+
+        while(slot < HIGHSCORE_ENTRIES)
+        {
+            ch = highscore_io_buffer[pos];
+            while(ch == ASCII_CR || ch == ASCII_NL)
+            {
+                pos = pos + 1;
+                ch = highscore_io_buffer[pos];
+            }
+
+            if(ch == 0)
+            {
+                slot = HIGHSCORE_ENTRIES;
+            }
+            else
+            {
+                base = slot * HIGHSCORE_NAME_STRIDE;
+                name_len = 0;
+
+                while(ch != 0 && ch != ASCII_COLON && ch != ASCII_CR && ch != ASCII_NL)
+                {
+                    if(name_len < HIGHSCORE_NAME_MAX)
+                    {
+                        highscore_names[base + name_len] = ch;
+                        name_len = name_len + 1;
+                    }
+                    pos = pos + 1;
+                    ch = highscore_io_buffer[pos];
+                }
+
+                highscore_names[base + name_len] = 0;
+
+                if(ch == ASCII_COLON)
+                {
+                    pos = pos + 1;
+                    ch = highscore_io_buffer[pos];
+                }
+
+                score = 0;
+                while(ch >= ASCII_0 && ch <= 57)
+                {
+                    score = (score * 10) + (ch - ASCII_0);
+                    pos = pos + 1;
+                    ch = highscore_io_buffer[pos];
+                }
+
+                if(score > HIGHSCORE_MAX_VALUE)
+                {
+                    score = HIGHSCORE_MAX_VALUE;
+                }
+                highscore_scores[slot] = score;
+
+                while(ch != 0 && ch != ASCII_NL)
+                {
+                    pos = pos + 1;
+                    ch = highscore_io_buffer[pos];
+                }
+                if(ch == ASCII_NL)
+                {
+                    pos = pos + 1;
+                }
+
+                slot = slot + 1;
+            }
+        }
+
+        high_score = highscore_scores[0];
+        return 0;
+    }
+
+    native proc highscore_load() -> int {
+        asm {
+            ; TakeSystem corrupts a6 and d0; park result on stack across the call
+            movem.l d1/a4/a6,-(sp)
+            jsr ReleaseSystem
+            jsr highscore_load_dos
+            move.l d0,-(sp)
+            jsr TakeSystem
+            move.l (sp)+,d0
+            movem.l (sp)+,d1/a4/a6
+        }
+    }
+
+    proc highscore_insert_new_top(score:int) -> void {
+        var i:int;
+        var j:int;
+        var src_base:int;
+        var dst_base:int;
+        var moved_ch:byte;
+
+        if(score > HIGHSCORE_MAX_VALUE)
+        {
+            score = HIGHSCORE_MAX_VALUE;
+        }
+
+        i = HIGHSCORE_ENTRIES - 1;
+        while(i > 0)
+        {
+            highscore_scores[i] = highscore_scores[i - 1];
+
+            src_base = (i - 1) * HIGHSCORE_NAME_STRIDE;
+            dst_base = i * HIGHSCORE_NAME_STRIDE;
+            for j = 0 to HIGHSCORE_NAME_STRIDE - 1
+            {
+                moved_ch = highscore_names[src_base + j];
+                highscore_names[dst_base + j] = moved_ch;
+            }
+
+            i = i - 1;
+        }
+
+        highscore_scores[0] = score;
+        call highscore_set_default_name(0);
+        high_score = score;
+    }
+
+    proc highscore_save_dos() -> int {
+        var handle:int;
+        var wrote:int;
+        var pos:int;
+        var slot:int;
+        var base:int;
+        var name_len:int;
+        var value:int;
+        var q:int;
+        var rem:int;
+        var digit_idx:int;
+        var digit_pos:int;
+        var ch:byte;
+
+        if(FileIoInit() != 0)
+        {
+            return -1;
+        }
+
+        pos = 0;
+        for slot = 0 to HIGHSCORE_ENTRIES - 1
+        {
+            base = slot * HIGHSCORE_NAME_STRIDE;
+            name_len = 0;
+            while(name_len < HIGHSCORE_NAME_MAX)
+            {
+                ch = highscore_names[base + name_len];
+                if(ch != 0)
+                {
+                    highscore_io_buffer[pos] = ch;
+                    pos = pos + 1;
+                }
+                name_len = name_len + 1;
+            }
+
+            highscore_io_buffer[pos] = ASCII_COLON;
+            pos = pos + 1;
+
+            value = highscore_scores[slot];
+            if(value > HIGHSCORE_MAX_VALUE)
+            {
+                value = HIGHSCORE_MAX_VALUE;
+            }
+
+            digit_pos = pos + 3;
+            for digit_idx = 0 to 3
+            {
+                q = value / 10;
+                q = q & 65535;
+                rem = value - (q * 10);
+                highscore_io_buffer[digit_pos] = ASCII_0 + rem;
+                digit_pos = digit_pos - 1;
+                value = q;
+            }
+            pos = pos + 4;
+
+            highscore_io_buffer[pos] = ASCII_NL;
+            pos = pos + 1;
+        }
+
+        handle = FileOpen(&highscore_file_name, DOS_MODE_NEWFILE);
+        if(handle == 0)
+        {
+            call FileIoDone();
+            return -2;
+        }
+
+        wrote = FileWrite(handle, &highscore_io_buffer, pos);
+        call FileClose(handle);
+        call FileIoDone();
+
+        if(wrote != pos)
+        {
+            return -3;
+        }
+
+        return 0;
+    }
+
+    native proc highscore_save() -> int {
+        asm {
+            ; TakeSystem corrupts a6/d0; Show() reinstalls game copperlist (TakeSystem does not)
+            movem.l d1/a4/a6,-(sp)
+            jsr ReleaseSystem
+            jsr highscore_save_dos
+            move.l d0,-(sp)
+            jsr TakeSystem
+            jsr Show
+            move.l (sp)+,d0
+            movem.l (sp)+,d1/a4/a6
+        }
     }
 
     proc hud_write_fuel(value:int) -> void {
@@ -3630,6 +3936,8 @@ data main_data:
     hud_dirty_a.b = 0
     hud_dirty_b.b = 0
     hud_force_redraw.b = 1
+    highscore_dirty.b = 0
+    highscore_needs_insert.b = 0
     rocket_fuel.w = 0
     fuel_active.b = 0
     fuel_falling.b = 0
@@ -3667,6 +3975,10 @@ data hud_strings:
     author_text.b = "by: rozsoft 2026", 0
     menu_start_text.b = "press fire", 0
 
+data highscore_data:
+    highscore_file_name.b = "highscore.txt", 0
+    highscore_default_name.b = "player", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]
     walk_left_bobs_b.l[6]
@@ -3693,6 +4005,11 @@ bss laser_bss:
     beam_prev_x_b.l[MAX_BEAMS]
     beam_prev_y_b.l[MAX_BEAMS]
     beam_prev_valid_b.l[MAX_BEAMS]
+
+bss highscore_bss:
+    highscore_scores.l[HIGHSCORE_ENTRIES]
+    highscore_names.b[HIGHSCORE_NAMES_BYTES]
+    highscore_io_buffer.b[HIGHSCORE_FILE_MAX_BYTES]
 
 // ── Meteor / alien enemy system ────────────────────────────────────────────
 // meteor_spawn_timer: counts down to 0, then one new meteor is spawned.

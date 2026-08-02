@@ -198,6 +198,7 @@ LIB_SOURCES=(
     "$LIB_DIR/heap.s"
     "$LIB_DIR/math.s"
     "$LIB_DIR/bob.s"
+    "$LIB_DIR/fileio.s"
     "$LIB_DIR/ptplayer.s"
     "$LIB_DIR/debug.s"
 )
@@ -304,6 +305,7 @@ ORDERED_LIBS=(
     "$LIB_DIR/heap.s"
     "$LIB_DIR/math.s"
     "$LIB_DIR/bob.s"
+    "$LIB_DIR/fileio.s"
     "$LIB_DIR/debug.s"
     "$LIB_DIR/ptplayer.s"
 )
