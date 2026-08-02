@@ -2031,19 +2031,6 @@ main:
         return 0;
     }
 
-    native proc highscore_load() -> int {
-        asm {
-            ; TakeSystem corrupts a6 and d0; park result on stack across the call
-            movem.l d1/a4/a6,-(sp)
-            jsr ReleaseSystem
-            jsr highscore_load_dos
-            move.l d0,-(sp)
-            jsr TakeSystem
-            move.l (sp)+,d0
-            movem.l (sp)+,d1/a4/a6
-        }
-    }
-
     proc highscore_insert_new_top(score:int, name_ptr:long) -> void {
         var i:int;
         var j:int;
@@ -2170,20 +2157,6 @@ main:
         }
 
         return 0;
-    }
-
-    native proc highscore_save() -> int {
-        asm {
-            ; TakeSystem corrupts a6/d0; Show() reinstalls game copperlist (TakeSystem does not)
-            movem.l d1/a4/a6,-(sp)
-            jsr ReleaseSystem
-            jsr highscore_save_dos
-            move.l d0,-(sp)
-            jsr TakeSystem
-            jsr Show
-            move.l (sp)+,d0
-            movem.l (sp)+,d1/a4/a6
-        }
     }
 
     proc hud_write_fuel(value:int) -> void {
