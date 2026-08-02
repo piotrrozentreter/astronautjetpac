@@ -223,6 +223,10 @@ const MENU_PLAYER_MIN_X = 32;
 const MENU_PLAYER_MAX_X = 272;
 const MENU_PLAYER_STEP = 2;
 const MENU_PLAYER_Y = 168+10;
+const MENU_VIEW_TITLE = 0;
+const MENU_VIEW_LADDER = 1;
+const MENU_TITLE_SHOW_FRAMES = 320;
+const MENU_LADDER_SHOW_FRAMES = 220;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -744,6 +748,10 @@ main:
         if(current_score > high_score)
         {
             high_score = current_score;
+        }
+
+        if(current_score > highscore_scores[HIGHSCORE_ENTRIES - 1])
+        {
             highscore_dirty = 1;
             highscore_needs_insert = 1;
         }
@@ -1412,6 +1420,64 @@ main:
         }
     }
 
+    proc ladder_write_score_text(value:int) -> void {
+        var i:int;
+        var idx:int;
+        var q:int;
+        var rem:int;
+        var v:int;
+        var digit:byte;
+
+        v = value;
+        if(v > 9999) { v = 9999; }
+
+        for i = 0 to 3
+        {
+            idx = 3 - i;
+            q = v / 10;
+            rem = v - (q * 10);
+            digit = hud_digit_chars[rem];
+            ladder_score_text[idx] = digit;
+            v = q;
+        }
+    }
+
+    proc draw_ladder_screen() -> void {
+        var i:int;
+        var row:int;
+        var base:int;
+        var name_ptr:int;
+        var rank_ptr:int;
+
+        call Text(40/2-17/2, 2, &ladder_title_text, HUD_TEXT_COLOR_IDX);
+        call Text(40/2-10/2, 29, &menu_start_text, HUD_TEXT_COLOR_IDX);
+
+        for i = 0 to HIGHSCORE_ENTRIES - 1
+        {
+            row = 7 + (i * 2);
+            rank_ptr = &ladder_rank_10;
+            if(i == 0) { rank_ptr = &ladder_rank_01; }
+            else if(i == 1) { rank_ptr = &ladder_rank_02; }
+            else if(i == 2) { rank_ptr = &ladder_rank_03; }
+            else if(i == 3) { rank_ptr = &ladder_rank_04; }
+            else if(i == 4) { rank_ptr = &ladder_rank_05; }
+            else if(i == 5) { rank_ptr = &ladder_rank_06; }
+            else if(i == 6) { rank_ptr = &ladder_rank_07; }
+            else if(i == 7) { rank_ptr = &ladder_rank_08; }
+            else if(i == 8) { rank_ptr = &ladder_rank_09; }
+
+            call Text(5, row, rank_ptr, HUD_TEXT_COLOR_IDX);
+
+            base = i * HIGHSCORE_NAME_STRIDE;
+            name_ptr = &highscore_names;
+            name_ptr = name_ptr + base;
+            call Text(10, row, name_ptr, HUD_TEXT_COLOR_IDX);
+
+            call ladder_write_score_text(highscore_scores[i]);
+            call Text(28, row, &ladder_score_text, HUD_TEXT_COLOR_IDX);
+        }
+    }
+
     proc run_title_menu() -> int {
         var key:byte;
         var fire_btn:u8;
@@ -1436,11 +1502,13 @@ main:
         var m_y:int;
         var m_dir:int;
         var m_bob:int;
+        var menu_view:int;
+        var menu_view_timer:int;
 
         call QuitSound();
         if(highscore_needs_insert != 0)
         {
-            call highscore_insert_new_top(high_score);
+            call highscore_insert_new_top(current_score);
             highscore_needs_insert = 0;
         }
         call menu_write_high(high_score);
@@ -1456,6 +1524,8 @@ main:
         player_bob = asset_handles[48];
         use_b = 0;
         menu_spawn_timer = 0;
+        menu_view = MENU_VIEW_TITLE;
+        menu_view_timer = MENU_TITLE_SHOW_FRAMES;
 
         // Title screen uses first 5 meteor slots for decorative fly-bys.
         for i = 0 to 4
@@ -1514,163 +1584,188 @@ main:
                 screen = 0;
             }
 
-            if(menu_spawn_timer > 0)
+            if(menu_view == MENU_VIEW_TITLE)
             {
-                menu_spawn_timer = menu_spawn_timer - 1;
-            }
-
-            active_count = 0;
-            free_slot = -1;
-            for i = 0 to 4
-            {
-                if(meteor_active[i] != 0)
+                if(menu_spawn_timer > 0)
                 {
-                    active_count = active_count + 1;
+                    menu_spawn_timer = menu_spawn_timer - 1;
                 }
-                else if(free_slot < 0)
-                {
-                    free_slot = i;
-                }
-            }
 
-            if(menu_spawn_timer == 0)
-            {
-                if(active_count < 5 && free_slot >= 0)
+                active_count = 0;
+                free_slot = -1;
+                for i = 0 to 4
                 {
-                    rv = prng_next();
-
-                    if((rv & 256) != 0)
+                    if(meteor_active[i] != 0)
                     {
-                        meteor_dir[free_slot] = METEOR_DIR_RIGHT;
-                        meteor_x[free_slot] = METEOR_LEFT_START_X;
+                        active_count = active_count + 1;
+                    }
+                    else if(free_slot < 0)
+                    {
+                        free_slot = i;
+                    }
+                }
+
+                if(menu_spawn_timer == 0)
+                {
+                    if(active_count < 5 && free_slot >= 0)
+                    {
+                        rv = prng_next();
+
+                        if((rv & 256) != 0)
+                        {
+                            meteor_dir[free_slot] = METEOR_DIR_RIGHT;
+                            meteor_x[free_slot] = METEOR_LEFT_START_X;
+                        }
+                        else
+                        {
+                            meteor_dir[free_slot] = METEOR_DIR_LEFT;
+                            meteor_x[free_slot] = METEOR_START_X;
+                        }
+
+                        meteor_type[free_slot] = ALIEN_TYPE_METEOR;
+                        meteor_y[free_slot] = 32 + ((rv >> 8) & 127);
+                        meteor_active[free_slot] = 1;
+                        menu_spawn_timer = 8 + ((rv >> 17) & 31);
                     }
                     else
                     {
-                        meteor_dir[free_slot] = METEOR_DIR_LEFT;
-                        meteor_x[free_slot] = METEOR_START_X;
+                        menu_spawn_timer = 6;
                     }
-
-                    meteor_type[free_slot] = ALIEN_TYPE_METEOR;
-                    meteor_y[free_slot] = 32 + ((rv >> 8) & 127);
-                    meteor_active[free_slot] = 1;
-                    menu_spawn_timer = 8 + ((rv >> 17) & 31);
                 }
-                else
+
+                for i = 0 to 4
                 {
-                    menu_spawn_timer = 6;
-                }
-            }
+                    if(meteor_active[i] != 0)
+                    {
+                        m_x = meteor_x[i];
+                        m_dir = meteor_dir[i];
 
-            for i = 0 to 4
+                        if(m_dir == METEOR_DIR_RIGHT)
+                        {
+                            m_x = m_x + METEOR_SPEED;
+                        }
+                        else
+                        {
+                            m_x = m_x - METEOR_SPEED;
+                        }
+
+                        if(m_x > METEOR_START_X || m_x < 0)
+                        {
+                            meteor_active[i] = 0;
+                        }
+                        else
+                        {
+                            meteor_x[i] = m_x;
+                        }
+                    }
+                }
+
+                for i = 0 to 4
+                {
+                    if(meteor_active[i] != 0)
+                    {
+                        m_x = meteor_x[i];
+                        m_y = meteor_y[i];
+                        m_dir = meteor_dir[i];
+
+                        if(use_b != 0)
+                        {
+                            if(m_dir == METEOR_DIR_RIGHT) { m_bob = meteor_bobs_right_b[i]; }
+                            else                          { m_bob = meteor_bobs_b[i]; }
+                        }
+                        else
+                        {
+                            if(m_dir == METEOR_DIR_RIGHT) { m_bob = meteor_bobs_right_a[i]; }
+                            else                          { m_bob = meteor_bobs_a[i]; }
+                        }
+
+                        call patch_alien_bob(m_bob, ALIEN_TYPE_METEOR, m_dir);
+                        call GetBobBackground(m_bob, m_x, m_y);
+                        call PasteBob(m_bob, m_x, m_y, 1);
+                    }
+                }
+
+                call GetBobBackground(rocket_bob, rocket_x, rocket_y);
+                call PasteBob(rocket_bob, rocket_x, rocket_y, 1);
+                call GetBobBackground(player_bob, player_x, MENU_PLAYER_Y);
+                call PasteBob(player_bob, player_x, MENU_PLAYER_Y, 1);
+
+                call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX);
+                call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
+                call Text(20-7, 20, &author_text, HUD_TEXT_COLOR_IDX);
+                call Text(40/2-10/2, 22, &menu_start_text, HUD_TEXT_COLOR_IDX);
+            }
+            else
             {
-                if(meteor_active[i] != 0)
-                {
-                    m_x = meteor_x[i];
-                    m_dir = meteor_dir[i];
-
-                    if(m_dir == METEOR_DIR_RIGHT)
-                    {
-                        m_x = m_x + METEOR_SPEED;
-                    }
-                    else
-                    {
-                        m_x = m_x - METEOR_SPEED;
-                    }
-
-                    if(m_x > METEOR_START_X || m_x < 0)
-                    {
-                        meteor_active[i] = 0;
-                    }
-                    else
-                    {
-                        meteor_x[i] = m_x;
-                    }
-                }
+                call draw_ladder_screen();
             }
-
-            for i = 0 to 4
-            {
-                if(meteor_active[i] != 0)
-                {
-                    m_x = meteor_x[i];
-                    m_y = meteor_y[i];
-                    m_dir = meteor_dir[i];
-
-                    if(use_b != 0)
-                    {
-                        if(m_dir == METEOR_DIR_RIGHT) { m_bob = meteor_bobs_right_b[i]; }
-                        else                          { m_bob = meteor_bobs_b[i]; }
-                    }
-                    else
-                    {
-                        if(m_dir == METEOR_DIR_RIGHT) { m_bob = meteor_bobs_right_a[i]; }
-                        else                          { m_bob = meteor_bobs_a[i]; }
-                    }
-
-                    call patch_alien_bob(m_bob, ALIEN_TYPE_METEOR, m_dir);
-                    call GetBobBackground(m_bob, m_x, m_y);
-                    call PasteBob(m_bob, m_x, m_y, 1);
-                }
-            }
-
-            call GetBobBackground(rocket_bob, rocket_x, rocket_y);
-            call PasteBob(rocket_bob, rocket_x, rocket_y, 1);
-            call GetBobBackground(player_bob, player_x, MENU_PLAYER_Y);
-            call PasteBob(player_bob, player_x, MENU_PLAYER_Y, 1);
-
-            call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX);
-            call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
-            call Text(20-7, 20, &author_text, HUD_TEXT_COLOR_IDX);
-            call Text(40/2-10/2, 22, &menu_start_text, HUD_TEXT_COLOR_IDX);
 
             call WaitFrame();
             call Show();
 
-            rocket_x = rocket_x + rocket_dx;
-            if(rocket_x <= 0)
+            if(menu_view == MENU_VIEW_TITLE)
             {
-                rocket_x = 0;
-                rocket_dx = -rocket_dx;
-            }
-            else if(rocket_x >= 320 - 64)
-            {
-                rocket_x = 320 - 64;
-                rocket_dx = -rocket_dx;
-            }
-
-            rocket_y = rocket_y + rocket_dy;
-            if(rocket_y <= 0)
-            {
-                rocket_y = 0;
-                rocket_dy = -rocket_dy;
-            }
-            else if(rocket_y >= 256 - 121)
-            {
-                rocket_y = 256 - 121;
-                rocket_dy = -rocket_dy;
-            }
-
-            pl_wait = pl_wait - 1;
-            if(pl_wait <= 0)
-            {
-                pl_wait = 6;
-                player_frame = player_frame + 1;
-                if(player_frame >= WALK_ANIM_FRAMES)
+                rocket_x = rocket_x + rocket_dx;
+                if(rocket_x <= 0)
                 {
-                    player_frame = 0;
+                    rocket_x = 0;
+                    rocket_dx = -rocket_dx;
+                }
+                else if(rocket_x >= 320 - 64)
+                {
+                    rocket_x = 320 - 64;
+                    rocket_dx = -rocket_dx;
+                }
+
+                rocket_y = rocket_y + rocket_dy;
+                if(rocket_y <= 0)
+                {
+                    rocket_y = 0;
+                    rocket_dy = -rocket_dy;
+                }
+                else if(rocket_y >= 256 - 121)
+                {
+                    rocket_y = 256 - 121;
+                    rocket_dy = -rocket_dy;
+                }
+
+                pl_wait = pl_wait - 1;
+                if(pl_wait <= 0)
+                {
+                    pl_wait = 6;
+                    player_frame = player_frame + 1;
+                    if(player_frame >= WALK_ANIM_FRAMES)
+                    {
+                        player_frame = 0;
+                    }
+                }
+
+                player_x = player_x + (player_dir * MENU_PLAYER_STEP);
+                if(player_x >= MENU_PLAYER_MAX_X)
+                {
+                    player_x = MENU_PLAYER_MAX_X;
+                    player_dir = -1;
+                }
+                else if(player_x <= MENU_PLAYER_MIN_X)
+                {
+                    player_x = MENU_PLAYER_MIN_X;
+                    player_dir = 1;
                 }
             }
 
-            player_x = player_x + (player_dir * MENU_PLAYER_STEP);
-            if(player_x >= MENU_PLAYER_MAX_X)
+            menu_view_timer = menu_view_timer - 1;
+            if(menu_view_timer <= 0)
             {
-                player_x = MENU_PLAYER_MAX_X;
-                player_dir = -1;
-            }
-            else if(player_x <= MENU_PLAYER_MIN_X)
-            {
-                player_x = MENU_PLAYER_MIN_X;
-                player_dir = 1;
+                if(menu_view == MENU_VIEW_TITLE)
+                {
+                    menu_view = MENU_VIEW_LADDER;
+                    menu_view_timer = MENU_LADDER_SHOW_FRAMES;
+                }
+                else
+                {
+                    menu_view = MENU_VIEW_TITLE;
+                    menu_view_timer = MENU_TITLE_SHOW_FRAMES;
+                }
             }
         }
 
@@ -1821,6 +1916,7 @@ main:
     proc highscore_insert_new_top(score:int) -> void {
         var i:int;
         var j:int;
+        var insert_pos:int;
         var src_base:int;
         var dst_base:int;
         var moved_ch:byte;
@@ -1830,8 +1926,23 @@ main:
             score = HIGHSCORE_MAX_VALUE;
         }
 
+        insert_pos = -1;
+        for i = 0 to HIGHSCORE_ENTRIES - 1
+        {
+            if(score > highscore_scores[i])
+            {
+                insert_pos = i;
+                i = HIGHSCORE_ENTRIES;
+            }
+        }
+
+        if(insert_pos < 0)
+        {
+            return;
+        }
+
         i = HIGHSCORE_ENTRIES - 1;
-        while(i > 0)
+        while(i > insert_pos)
         {
             highscore_scores[i] = highscore_scores[i - 1];
 
@@ -1846,9 +1957,9 @@ main:
             i = i - 1;
         }
 
-        highscore_scores[0] = score;
-        call highscore_set_default_name(0);
-        high_score = score;
+        highscore_scores[insert_pos] = score;
+        call highscore_set_default_name(insert_pos);
+        high_score = highscore_scores[0];
     }
 
     proc highscore_save_dos() -> int {
@@ -3974,6 +4085,18 @@ data hud_strings:
     game_over_text.b = "game over", 0
     author_text.b = "by: rozsoft 2026", 0
     menu_start_text.b = "press fire", 0
+    ladder_title_text.b = "high score ladder", 0
+    ladder_rank_01.b = "01", 0
+    ladder_rank_02.b = "02", 0
+    ladder_rank_03.b = "03", 0
+    ladder_rank_04.b = "04", 0
+    ladder_rank_05.b = "05", 0
+    ladder_rank_06.b = "06", 0
+    ladder_rank_07.b = "07", 0
+    ladder_rank_08.b = "08", 0
+    ladder_rank_09.b = "09", 0
+    ladder_rank_10.b = "10", 0
+    ladder_score_text.b = "0000", 0
 
 data highscore_data:
     highscore_file_name.b = "highscore.txt", 0
