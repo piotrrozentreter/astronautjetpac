@@ -9,7 +9,7 @@ SFX_VOLUME      equ 32
 SFX_PRI_LASER       equ 255
 SFX_PRI_EXPLOSION   equ 228
 SFX_PRI_FUEL        equ 235
-SFX_PRI_JET         equ 228
+SFX_PRI_JET         equ 238
 SFX_PRI_ENERGY      equ 255
 SFX_PRI_PICKUP      equ 225
 SFX_PRI_DEAD        equ 255
