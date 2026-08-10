@@ -2405,7 +2405,6 @@ main:
 
     proc game_start() -> int {
         var run:bool = 1;
-//        var key:byte;
         var screen:int = 1;
         var i:int;
         var rv:int;
@@ -2450,6 +2449,8 @@ main:
 
         call prime_level_buffers(player_bob_right, player_bob_right_b);
         call SwitchMusic(0);
+
+//        var key:byte;
 
         while (run == 1)
         {
@@ -3252,11 +3253,14 @@ main:
             next_y = meteor_y[i];
             solid_hit = 0;
 
-            if (meteor_dir[i] == METEOR_DIR_RIGHT) { next_x = next_x + METEOR_SPEED; }
-            else                                    { next_x = next_x - METEOR_SPEED; }
-
-            if (meteor_dir[i] == METEOR_DIR_RIGHT) { probe_x = next_x + METEOR_BOB_W_M1; }
-            else                                    { probe_x = next_x; }
+            if (meteor_dir[i] == METEOR_DIR_RIGHT) 
+            { 
+                next_x = next_x + 1 + (next_y & 3); probe_x = next_x + METEOR_BOB_W_M1;
+            }
+            else                                    
+            { 
+                next_x = next_x - 1 - (next_y & 3); probe_x = next_x;
+            }
 
             if (alien_type == ALIEN_TYPE_METEOR)
             {
@@ -3285,8 +3289,8 @@ main:
             }
             else if (alien_type == ALIEN_TYPE_UFO_0002)
             {
-                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED; }
-                else                                  { next_y = next_y - UFO_VERT_SPEED; }
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED + (i & 1); }
+                else                                  { next_y = next_y - UFO_VERT_SPEED - (i & 1); }
 
                 if (next_x > METEOR_START_X || next_x < 0)
                 {
@@ -3335,8 +3339,8 @@ main:
             }
             else if (alien_type == ALIEN_TYPE_UFO_0003)
             {
-                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED; }
-                else                                  { next_y = next_y - UFO_VERT_SPEED; }
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED + (i & 1); }
+                else                                  { next_y = next_y - UFO_VERT_SPEED - (i & 1); }
 
                 if (next_x > METEOR_START_X || next_x < 0)
                 {
@@ -3404,8 +3408,8 @@ main:
                     meteor_dir[i] = METEOR_DIR_LEFT;
                 }
 
-                if (player_y > meteor_y[i]) { next_y = next_y + UFO_VERT_SPEED; }
-                else if (player_y < meteor_y[i]) { next_y = next_y - UFO_VERT_SPEED; }
+                if (player_y > meteor_y[i]) { next_y = next_y + UFO_VERT_SPEED + (i & 1); }
+                else if (player_y < meteor_y[i]) { next_y = next_y - UFO_VERT_SPEED - (i & 1); }
 
                 if (next_x > METEOR_START_X || next_x < 0)
                 {
@@ -3462,8 +3466,8 @@ main:
                     meteor_vtimer[i] = 6 + ((rv >> 10) & 15);
                 }
 
-                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED; }
-                else                                  { next_y = next_y - UFO_VERT_SPEED; }
+                if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED + (i & 1); }
+                else                                  { next_y = next_y - UFO_VERT_SPEED - (i & 1); }
 
                 if (next_y <= METEOR_MIN_Y)
                 {
