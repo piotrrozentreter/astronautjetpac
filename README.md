@@ -1,6 +1,6 @@
 # Astronaut Jet Pac
 
-Version 0.9.5
+Version 0.9.7
 
 Astronaut Jet Pac is a Jet Pac-inspired game for the Amiga.
 The project is still in active development and focuses on gameplay, graphics, and retro presentation.
