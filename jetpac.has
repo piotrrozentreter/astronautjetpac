@@ -231,6 +231,8 @@ const MENU_TITLE_SHOW_FRAMES = 100;
 const MENU_LADDER_SHOW_FRAMES = 100;
 const GADGET_TYPE_EDITBOX = 2;
 
+const F1_DEBUG = 0;
+
     public CreateMap;
     public CopyLevelBuffer;
     public RefreshLevelBuffersIfDirty;
@@ -2450,16 +2452,19 @@ main:
         call prime_level_buffers(player_bob_right, player_bob_right_b);
         call SwitchMusic(0);
 
-//        var key:byte;
+#ifdef F1_DEBUG
+        var key:byte;
+#endif
 
         while (run == 1)
         {
-            // key = GetKey();
-            // if(key == KEY_F1)
-            // {
-            //     level_completed = 1;
-            // }
-
+#ifdef F1_DEBUG
+            key = GetKey();
+            if(key == KEY_F1)
+            {
+                level_completed = 1;
+            }
+#endif
             call SwapScreen();
             // Animate stars on the newly active back buffer once per frame.
             call _stars_animate(gfx_current_screen_ptr);
