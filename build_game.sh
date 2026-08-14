@@ -191,6 +191,7 @@ LIB_SOURCES=(
     "$LIB_DIR/font8x8.s"
     "$LIB_DIR/helpers.s"
     "$LIB_DIR/takeover.s"
+    "$LIB_DIR/wbstartup.s"
     "$LIB_DIR/input.s"
     "$LIB_DIR/keyboard.s"
     "$LIB_DIR/sprite.s"
@@ -294,6 +295,7 @@ done
 ORDERED_LIBS=(
     "$LIB_DIR/helpers.s"
     "$LIB_DIR/takeover.s"
+    "$LIB_DIR/wbstartup.s"
     "$LIB_DIR/graphics.s"
     "$LIB_DIR/font8x8.s"
     "$LIB_DIR/input.s"
@@ -392,7 +394,13 @@ else
 fi
 
 echo "[2/3] Assemble objects..."
+# PETSCII/screen-code space mapping: source char code vs. font glyph index used for it.
+GFX_SPACE_CODE="${GFX_SPACE_CODE:-32}"
+# font8x8.s glyph 0 (index = char - 32) is already blank, so space must map there.
+GFX_SPACE_GLYPH="${GFX_SPACE_GLYPH:-0}"
 VASM_FLAGS=(-m68000 -quiet -Fhunk -kick1hunks -I "$LIB_DIR")
+VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
+VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
 "$VASM" "${VASM_FLAGS[@]}" "$OUT_S" -o "$OUT_O"
 
 OBJECTS=("$OUT_O")
@@ -424,6 +432,8 @@ if [[ -f "$STAR_C" ]]; then
     "$VBCC_CC_BIN" "${VBCC_ARGS[@]}"
     # Assemble the generated source; -nowarn=62 suppresses vbcc mnemonics warnings.
     VBCC_VASM_FLAGS=(-m68000 -quiet -Fhunk -nowarn=62 -I "$LIB_DIR")
+    VBCC_VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
+    VBCC_VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
     "$VASM" "${VBCC_VASM_FLAGS[@]}" "$STAR_S" -o "$STAR_O"
     OBJECTS+=("$STAR_O")
     echo "  star.o added to link"

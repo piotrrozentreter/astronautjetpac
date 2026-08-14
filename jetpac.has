@@ -19,6 +19,8 @@ extern func DebugLogStr(msg:int) -> void;
 extern func DebugLogInt(value:int) -> void;
 extern func DebugFlushToDos() -> void;
 
+extern func WBStartup() -> void;
+extern func WBExit() -> void;
 extern func TakeSystem() -> void;
 extern func ReleaseSystem() -> void;
 
@@ -244,6 +246,7 @@ code main:
 
     asm {
 main:
+        jsr WBStartup       ; pick up Workbench message (no-op from CLI)
         jsr highscore_load_dos
         jsr TakeSystem
         jsr game_start
@@ -254,6 +257,7 @@ main:
         jsr highscore_save_dos
 .no_hs_save:
         jsr DebugFlushToDos
+        jmp WBExit          ; Forbid + ReplyMsg, must be last
         rts
     }
 

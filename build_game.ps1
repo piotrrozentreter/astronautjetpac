@@ -260,7 +260,12 @@ try {
     Set-Location $oldLocation
 }
 
+# PETSCII/screen-code space mapping: source char code vs. font glyph index used for it.
+$GfxSpaceCode = if ($env:GFX_SPACE_CODE) { $env:GFX_SPACE_CODE } else { "32" }
+# font8x8.s glyph 0 (index = char - 32) is already blank, so space must map there.
+$GfxSpaceGlyph = if ($env:GFX_SPACE_GLYPH) { $env:GFX_SPACE_GLYPH } else { "0" }
 $VasmArgs = @("-m68000", "-Fhunk", "-kick1hunks", "-nowarn=62", "-quiet", "-I", $LibDir)
+$VasmArgs += @("-D", "GFX_SPACE_CODE=$GfxSpaceCode", "-D", "GFX_SPACE_GLYPH=$GfxSpaceGlyph")
 & $Vasm @VasmArgs $OutS "-o" $OutO
 if ($LASTEXITCODE -ne 0) {
     throw "Assembly of main source failed with exit code $LASTEXITCODE"
@@ -305,6 +310,7 @@ if (Test-Path $StarC) {
     # Assemble the generated source; skip -kick1hunks to stay compatible with
     # the opt/idnt directives that vbccm68k emits, add -nowarn=62 as per vbcc config.
     $VbccVasmArgs = @("-m68000", "-Fhunk", "-nowarn=62", "-quiet", "-I", $LibDir)
+    $VbccVasmArgs += @("-D", "GFX_SPACE_CODE=$GfxSpaceCode", "-D", "GFX_SPACE_GLYPH=$GfxSpaceGlyph")
     & $Vasm @VbccVasmArgs $StarS "-o" $StarO
     if ($LASTEXITCODE -ne 0) {
         throw "Assembly of star_c.s failed with exit code $LASTEXITCODE"
