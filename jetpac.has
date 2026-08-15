@@ -1659,11 +1659,11 @@ main:
 
                         if(m_dir == METEOR_DIR_RIGHT)
                         {
-                            m_x = m_x + METEOR_SPEED;
+                            m_x = m_x + METEOR_SPEED + i;
                         }
                         else
                         {
-                            m_x = m_x - METEOR_SPEED;
+                            m_x = m_x - METEOR_SPEED - i;
                         }
 
                         if(m_x > METEOR_START_X || m_x < 0)
