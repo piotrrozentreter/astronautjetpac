@@ -4,14 +4,16 @@
 #   .has -> .s (hasc) -> .o (vasm) -> .exe (vlink)
 #
 # Usage:
-#   ./build_game.sh <game_source.has|all> [output_name]
+#   ./build_game.sh [--cpu 68000|68020] <game_source.has|all> [output_name]
 #
 # Examples:
 #   ./build_game.sh jetpac.has
+#   ./build_game.sh --cpu 68020 jetpac.has
 #   ./build_game.sh path/to/game.has custom_name
 #   ./build_game.sh all
 #
 # Environment overrides:
+#   HASC_CPU=68000|68020               CPU target (default: 68000, --cpu wins)
 #   HASC_PYTHON=/path/to/python        Python used for hasc (default: auto)
 #   HASC_ROOT=/path/to/highamigaassembler
 #                                    Fallback compiler checkout used when
@@ -63,14 +65,48 @@ fi
 
 usage() {
     cat <<'EOF'
-Usage: ./build_game.sh <game_source.has|all> [output_name]
+Usage: ./build_game.sh [--cpu 68000|68020] <game_source.has|all> [output_name]
 
 Examples:
     ./build_game.sh jetpac.has
+    ./build_game.sh --cpu 68020 jetpac.has
     ./build_game.sh path/to/game.has custom_name
     ./build_game.sh all
 EOF
 }
+
+CPU="${HASC_CPU:-68000}"
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --cpu)
+            [[ $# -ge 2 ]] || { echo "ERROR: --cpu requires a value" >&2; exit 2; }
+            CPU="$2"
+            shift 2
+            ;;
+        --cpu=*)
+            CPU="${1#*=}"
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            POSITIONAL+=("$1")
+            shift
+            ;;
+    esac
+done
+set -- ${POSITIONAL[@]+"${POSITIONAL[@]}"}
+
+case "$CPU" in
+    68000|68020) ;;
+    *)
+        echo "ERROR: unsupported CPU target '$CPU' (expected 68000 or 68020)" >&2
+        exit 2
+        ;;
+esac
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
     usage
@@ -83,7 +119,7 @@ OUT_NAME="${2:-}"
 if [[ "$INPUT" == "all" ]]; then
     for module in jetpac.has frontpage.has; do
         echo "=== Building module: $module ==="
-        "$0" "$module"
+        "$0" --cpu "$CPU" "$module"
     done
     echo "All modules built successfully."
     exit 0
@@ -321,6 +357,7 @@ done
 
 echo "=== Build: $SRC ==="
 echo "  Root  : $ROOT"
+echo "  CPU   : $CPU"
 echo "  Python: $PYTHON"
 echo "  VASM  : $VASM"
 echo "  VLINK : $VLINK"
@@ -388,9 +425,9 @@ fi
     fi
 
 if [[ -n "$HASC_PYTHONPATH" ]]; then
-    (cd "$SRC_DIR" && PYTHONPATH="$HASC_PYTHONPATH${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m hasc.cli "$SRC_FILE" -o "$OUT_S")
+    (cd "$SRC_DIR" && PYTHONPATH="$HASC_PYTHONPATH${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m hasc.cli "$SRC_FILE" --cpu "$CPU" -o "$OUT_S")
 else
-    (cd "$SRC_DIR" && "$PYTHON" -m hasc.cli "$SRC_FILE" -o "$OUT_S")
+    (cd "$SRC_DIR" && "$PYTHON" -m hasc.cli "$SRC_FILE" --cpu "$CPU" -o "$OUT_S")
 fi
 
 echo "[2/3] Assemble objects..."
@@ -398,7 +435,7 @@ echo "[2/3] Assemble objects..."
 GFX_SPACE_CODE="${GFX_SPACE_CODE:-32}"
 # font8x8.s glyph 0 (index = char - 32) is already blank, so space must map there.
 GFX_SPACE_GLYPH="${GFX_SPACE_GLYPH:-0}"
-VASM_FLAGS=(-m68000 -quiet -Fhunk -kick1hunks -I "$LIB_DIR")
+VASM_FLAGS=("-m$CPU" -quiet -Fhunk -kick1hunks -I "$LIB_DIR")
 VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
 VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
 "$VASM" "${VASM_FLAGS[@]}" "$OUT_S" -o "$OUT_O"
@@ -426,12 +463,12 @@ STAR_S="$BUILD/star_c.s"
 STAR_O="$BUILD/star.o"
 if [[ -f "$STAR_C" ]]; then
     echo "  C compile: star.c"
-    VBCC_ARGS=(-cpu=68000 -quiet "-o=$STAR_S")
+    VBCC_ARGS=("-cpu=$CPU" -quiet "-o=$STAR_S")
     [[ -n "$VBCC_INCLUDE" ]] && VBCC_ARGS+=("-I=$VBCC_INCLUDE")
     VBCC_ARGS+=("$STAR_C")
     "$VBCC_CC_BIN" "${VBCC_ARGS[@]}"
     # Assemble the generated source; -nowarn=62 suppresses vbcc mnemonics warnings.
-    VBCC_VASM_FLAGS=(-m68000 -quiet -Fhunk -nowarn=62 -I "$LIB_DIR")
+    VBCC_VASM_FLAGS=("-m$CPU" -quiet -Fhunk -nowarn=62 -I "$LIB_DIR")
     VBCC_VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
     VBCC_VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
     "$VASM" "${VBCC_VASM_FLAGS[@]}" "$STAR_S" -o "$STAR_O"
