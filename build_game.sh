@@ -444,7 +444,7 @@ case "$BASE_NAME" in
     jetpac)
         DISABLE_640x256=1
         DISABLE_HAM=1
-        HEAP_MEMORY=131072
+        HEAP_MEMORY=141308
         ;;
     frontpage)
         DISABLE_640x256=1

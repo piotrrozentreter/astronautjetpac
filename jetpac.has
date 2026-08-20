@@ -6,7 +6,7 @@ extern func SetGraphicsMode(mode:int) -> int;
 extern func SwapScreen() -> void;
 extern func ClearScreen() -> void;
 extern func Show() -> void;
-extern func SetColor(index:int, color:int) -> void;
+extern func LoadPalette(palette_ptr:int, num_colors:int) -> void;
 extern func HeapInit() -> void;
 extern func SetFont(font_ptr:int) -> int;
 extern func Text(x:int, y:int, string:int, color:int) -> int;
@@ -260,13 +260,6 @@ main:
         jsr DebugFlushToDos
         jmp WBExit          ; Forbid + ReplyMsg, must be last
         rts
-    }
-
-    native proc peek_w(__reg(a0) a: long) -> int {
-        asm {
-            move.w (a0),d0
-            ext.l d0
-        }
     }
 
     native proc peek_b(__reg(a0) a: long) -> byte {
@@ -537,10 +530,7 @@ main:
         player_face_right = 1;
 
         pal = GetBobPalette(player_bob_right);
-        for i = 0 to MAX_COLORS - 1
-        {
-            call SetColor(i, peek_w(pal + (i << 1)));
-        }
+        call LoadPalette(pal, MAX_COLORS);
 
         if(load_meteor_bobs() == -1)
         {
