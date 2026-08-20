@@ -437,18 +437,6 @@ echo "[2/3] Assemble objects..."
 GFX_SPACE_CODE="${GFX_SPACE_CODE:-32}"
 # font8x8.s glyph 0 (index = char - 32) is already blank, so space must map there.
 GFX_SPACE_GLYPH="${GFX_SPACE_GLYPH:-0}"
-DISABLE_640x256="${DISABLE_640x256:-0}"
-DISABLE_HAM="${DISABLE_HAM:-0}"
-case "$BASE_NAME" in
-    jetpac)
-        DISABLE_640x256=1
-        DISABLE_HAM=1
-        ;;
-    frontpage)
-        DISABLE_640x256=1
-        DISABLE_HAM=0
-        ;;
-esac
 VASM_FLAGS=("-m$CPU" -quiet -Fhunk -kick1hunks -I "$LIB_DIR")
 VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
 VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
