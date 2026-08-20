@@ -493,7 +493,7 @@ if [[ -f "$STAR_C" ]]; then
     VBCC_ARGS+=("$STAR_C")
     "$VBCC_CC_BIN" "${VBCC_ARGS[@]}"
     # Assemble the generated source; -nowarn=62 suppresses vbcc mnemonics warnings.
-    VBCC_VASM_FLAGS=("-m$CPU" -quiet -Fhunk -nowarn=62 -I "$LIB_DIR")
+    VBCC_VASM_FLAGS=("-m$CPU" -quiet -Fhunk -kick1hunks -nowarn=62 -I "$LIB_DIR")
     VBCC_VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
     VBCC_VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
     if [[ "$DISABLE_640x256" == "1" ]]; then
