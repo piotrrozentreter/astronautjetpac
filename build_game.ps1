@@ -280,11 +280,13 @@ $GfxSpaceCode = if ($env:GFX_SPACE_CODE) { $env:GFX_SPACE_CODE } else { "32" }
 $GfxSpaceGlyph = if ($env:GFX_SPACE_GLYPH) { $env:GFX_SPACE_GLYPH } else { "0" }
 $Disable640x256 = if ($env:DISABLE_640x256 -eq "1") { $true } else { $false }
 $DisableHam = if ($env:DISABLE_HAM -eq "1") { $true } else { $false }
+$HeapMemory = 0
 $SourceBaseName = [IO.Path]::GetFileNameWithoutExtension($SourcePath)
 switch ($SourceBaseName.ToLowerInvariant()) {
     "jetpac" {
         $Disable640x256 = $true
         $DisableHam = $true
+        $HeapMemory = 131072
     }
     "frontpage" {
         $Disable640x256 = $true
@@ -298,6 +300,9 @@ if ($Disable640x256) {
 }
 if ($DisableHam) {
     $VasmArgs += @("-D", "DISABLE_HAM=1")
+}
+if ($HeapMemory -ne 0) {
+    $VasmArgs += @("-D", "HEAP_MEMORY=$HeapMemory")
 }
 & $Vasm @VasmArgs $OutS "-o" $OutO
 if ($LASTEXITCODE -ne 0) {
@@ -349,6 +354,9 @@ if (Test-Path $StarC) {
     }
     if ($DisableHam) {
         $VbccVasmArgs += @("-D", "DISABLE_HAM=1")
+    }
+    if ($HeapMemory -ne 0) {
+        $VbccVasmArgs += @("-D", "HEAP_MEMORY=$HeapMemory")
     }
     & $Vasm @VbccVasmArgs $StarS "-o" $StarO
     if ($LASTEXITCODE -ne 0) {

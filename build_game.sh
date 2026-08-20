@@ -439,10 +439,12 @@ GFX_SPACE_CODE="${GFX_SPACE_CODE:-32}"
 GFX_SPACE_GLYPH="${GFX_SPACE_GLYPH:-0}"
 DISABLE_640x256="${DISABLE_640x256:-0}"
 DISABLE_HAM="${DISABLE_HAM:-0}"
+HEAP_MEMORY="0"
 case "$BASE_NAME" in
     jetpac)
         DISABLE_640x256=1
         DISABLE_HAM=1
+        HEAP_MEMORY=131072
         ;;
     frontpage)
         DISABLE_640x256=1
@@ -457,6 +459,9 @@ if [[ "$DISABLE_640x256" == "1" ]]; then
 fi
 if [[ "$DISABLE_HAM" == "1" ]]; then
     VASM_FLAGS+=( -D "DISABLE_HAM=1" )
+fi
+if [[ "$HEAP_MEMORY" != "0" ]]; then
+    VASM_FLAGS+=( -D "HEAP_MEMORY=${HEAP_MEMORY}" )
 fi
 "$VASM" "${VASM_FLAGS[@]}" "$OUT_S" -o "$OUT_O"
 
@@ -496,6 +501,9 @@ if [[ -f "$STAR_C" ]]; then
     fi
     if [[ "$DISABLE_HAM" == "1" ]]; then
         VBCC_VASM_FLAGS+=( -D "DISABLE_HAM=1" )
+    fi
+    if [[ "$HEAP_MEMORY" != "0" ]]; then
+        VBCC_VASM_FLAGS+=( -D "HEAP_MEMORY=${HEAP_MEMORY}" )
     fi
     "$VASM" "${VBCC_VASM_FLAGS[@]}" "$STAR_S" -o "$STAR_O"
     OBJECTS+=("$STAR_O")
