@@ -214,7 +214,8 @@ const SFX_ENERGY = 4;
 const SFX_FUEL_PICKUP = 5;
 const SFX_PLAYER_DEATH = 6;
 
-const MAX_LEVELS = 5;
+const MAX_LEVELS = 5;                  // available map/alien pages
+const MAX_GAME_LEVEL = 99;
 const DEATH_ANIM_FRAMES = 5;      // frames in dead-l/dead-r animation
 const DEATH_ANIM_RATE   = 4;      // VBlanks per death animation cel
 const DEATH_WAIT_FRAMES = 40;   
@@ -233,7 +234,7 @@ const MENU_TITLE_SHOW_FRAMES = 100;
 const MENU_LADDER_SHOW_FRAMES = 100;
 const GADGET_TYPE_EDITBOX = 2;
 
-const F1_DEBUG = 0;
+const F1_DEBUG = 1;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -828,7 +829,8 @@ main:
             beam_active[beam_slot] = 0;
 
             lvl = current_level;
-            if(lvl < 1 || lvl > MAX_LEVELS) { lvl = 1; }
+            if(lvl < 1) { lvl = 1; }
+            if(lvl > MAX_GAME_LEVEL) { lvl = MAX_GAME_LEVEL; }
             add_pts = SCORE_FOR_KILLING * lvl;
             add_score(add_pts);
             return 1;
@@ -1410,6 +1412,30 @@ main:
             rem = v - (q * 10);
             digit = hud_digit_chars[rem];
             hud_line_text[29 + idx] = digit;
+            v = q;
+        }
+    }
+
+    proc hud_write_level(value:int) -> void {
+        var i:int;
+        var idx:int;
+        var q:int;
+        var rem:int;
+        var v:int;
+        var digit:byte;
+
+        v = value;
+        if(v < 1) { v = 1; }
+        if(v > MAX_GAME_LEVEL) { v = MAX_GAME_LEVEL; }
+
+        for i = 0 to 1
+        {
+            idx = 1 - i;
+            q = v / 10;
+            q = q & 65535;
+            rem = v - (q * 10);
+            digit = hud_digit_chars[rem];
+            hud_line_text[22 + idx] = digit;
             v = q;
         }
     }
@@ -2211,7 +2237,7 @@ main:
             if(shown_lives > 9) { shown_lives = 9; }
             lives_digit = hud_digit_chars[shown_lives];
             hud_line_text[18] = lives_digit;
-            hud_line_text[23] = hud_digit_chars[current_level];
+            call hud_write_level(current_level);
 
             hud_prev_score = current_score;
             hud_prev_high_score = high_score;
@@ -2894,7 +2920,7 @@ main:
         level_completed = 0;
 
         next_level = current_level + 1;
-        if(next_level > MAX_LEVELS) { next_level = 1; }
+        if(next_level > MAX_GAME_LEVEL) { next_level = MAX_GAME_LEVEL; }
 
         call SwitchMusic(1);
 
@@ -3178,7 +3204,9 @@ main:
         if (meteor_spawn_timer > 0) { meteor_spawn_timer = meteor_spawn_timer - 1; }
 
         stage = current_level;
-        if (stage < 1 || stage > MAX_LEVELS) { stage = 1; }
+        if (stage < 1) { stage = 1; }
+        if (stage > MAX_GAME_LEVEL) { stage = MAX_GAME_LEVEL; }
+        stage = ((stage - 1) % MAX_LEVELS) + 1;
 
         // Count active meteors and record the first fully-clean free slot.
         // A slot is only safe to reuse once both screen buffers have erased
@@ -3812,44 +3840,42 @@ code level_code:
         var x:u16;
         var y:u16;
         var tile:u8;
+        var map_level:int;
         var map_ptr:byte*;
 
         call ClearLevelBuffer();
 
+        current_level = level;
+        if (current_level < 1) { current_level = 1; }
+        if (current_level > MAX_GAME_LEVEL) { current_level = MAX_GAME_LEVEL; }
+        map_level = ((current_level - 1) % MAX_LEVELS) + 1;
+
         // Select map data based on level
-        if (level == 1)
+        if (map_level == 1)
         {
             map_data = &map1;
         }
-        else if (level == 2)
+        else if (map_level == 2)
         {
             map_data = &map2;
         }
-        else if (level == 3)
+        else if (map_level == 3)
         {
             map_data = &map3;
         }
-        else if (level == 4)
+        else if (map_level == 4)
         {
             map_data = &map4;
         }
-        else if (level == 5)
+        else if (map_level == 5)
         {
             map_data = &map5;
-        }
-        else if (level <= MAX_LEVELS)
-        {
-            // Additional levels currently reuse map1 terrain; alien logic changes by level.
-            map_data = &map1;
         }
         else
         {
             // Default to map1 if level not recognized
             map_data = &map1;
         }
-
-        current_level = level;
-        if (current_level < 1 || current_level > MAX_LEVELS) { current_level = 1; }
         rocket_fuel = 0;
 
         // Load global into typed local for array access
