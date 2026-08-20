@@ -20,6 +20,8 @@
 #                                    is missing.
 #   VASM=/path/to/vasmm68k_mot         Assembler (default: auto)
 #   VLINK=/path/to/vlink               Linker (default: vlink)
+#   DISABLE_640x256=1                  Omit hires 640x256 screen buffers
+#   DISABLE_HAM=1                      Omit HAM6 screen buffers
 #
 # Notes:
 # - Source path can be relative to current directory, script directory, or root.
@@ -216,14 +218,14 @@ for lib in "${LIB_SOURCES[@]}"; do
     done < <(
         grep -Eio '^[[:space:]]*xdef[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$lib" \
             | sed -E 's/^[[:space:]]*[xX][dD][eE][fF][[:space:]]+//' \
-            | sort -u
+            | /usr/bin/sort -u
     )
 done
 
 mapfile -t EXTERN_SYMBOLS < <(
     grep -Eio '^[[:space:]]*extern[[:space:]]+(func|var)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$SRC" \
         | sed -E 's/^[[:space:]]*[eE][xX][tT][eE][rR][nN][[:space:]]+([fF][uU][nN][cC]|[vV][aA][rR])[[:space:]]+//' \
-        | sort -u
+        | /usr/bin/sort -u
 )
 
 DEBUG_EXTERN_USED=0
@@ -398,9 +400,27 @@ echo "[2/3] Assemble objects..."
 GFX_SPACE_CODE="${GFX_SPACE_CODE:-32}"
 # font8x8.s glyph 0 (index = char - 32) is already blank, so space must map there.
 GFX_SPACE_GLYPH="${GFX_SPACE_GLYPH:-0}"
+DISABLE_640x256="${DISABLE_640x256:-0}"
+DISABLE_HAM="${DISABLE_HAM:-0}"
+case "$BASE_NAME" in
+    jetpac)
+        DISABLE_640x256=1
+        DISABLE_HAM=1
+        ;;
+    frontpage)
+        DISABLE_640x256=1
+        DISABLE_HAM=0
+        ;;
+esac
 VASM_FLAGS=(-m68000 -quiet -Fhunk -kick1hunks -I "$LIB_DIR")
 VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
 VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
+if [[ "$DISABLE_640x256" == "1" ]]; then
+    VASM_FLAGS+=( -D "DISABLE_640x256=1" )
+fi
+if [[ "$DISABLE_HAM" == "1" ]]; then
+    VASM_FLAGS+=( -D "DISABLE_HAM=1" )
+fi
 "$VASM" "${VASM_FLAGS[@]}" "$OUT_S" -o "$OUT_O"
 
 OBJECTS=("$OUT_O")
@@ -417,7 +437,7 @@ if [[ -d "$ASSETS_DIR" ]]; then
         obj="$BUILD/$(basename "${asset_file%.s}").o"
         "$VASM" "${VASM_FLAGS[@]}" "$asset_file" -o "$obj"
         OBJECTS+=("$obj")
-    done < <(find "$ASSETS_DIR" -maxdepth 1 -name "*.s" -type f | sort)
+    done < <(/usr/bin/find "$ASSETS_DIR" -maxdepth 1 -name "*.s" -type f | /usr/bin/sort)
 fi
 
 # --- Compile star.c with vbccm68k ------------------------------------------
@@ -434,6 +454,12 @@ if [[ -f "$STAR_C" ]]; then
     VBCC_VASM_FLAGS=(-m68000 -quiet -Fhunk -nowarn=62 -I "$LIB_DIR")
     VBCC_VASM_FLAGS+=( -D "GFX_SPACE_CODE=${GFX_SPACE_CODE}" )
     VBCC_VASM_FLAGS+=( -D "GFX_SPACE_GLYPH=${GFX_SPACE_GLYPH}" )
+    if [[ "$DISABLE_640x256" == "1" ]]; then
+        VBCC_VASM_FLAGS+=( -D "DISABLE_640x256=1" )
+    fi
+    if [[ "$DISABLE_HAM" == "1" ]]; then
+        VBCC_VASM_FLAGS+=( -D "DISABLE_HAM=1" )
+    fi
     "$VASM" "${VBCC_VASM_FLAGS[@]}" "$STAR_S" -o "$STAR_O"
     OBJECTS+=("$STAR_O")
     echo "  star.o added to link"

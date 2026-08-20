@@ -4,6 +4,11 @@ param(
     [switch]$AllModules
 )
 
+# Environment overrides:
+#   GFX_SPACE_CODE=32, GFX_SPACE_GLYPH=0
+#   DISABLE_640x256=1       Omit hires 640x256 screen buffers
+#   DISABLE_HAM=1           Omit HAM6 screen buffers
+
 $ErrorActionPreference = "Stop"
 
 if ($AllModules -or $Source -eq "all") {
@@ -141,6 +146,7 @@ $LibSources = @(
     "font8x8.s",
     "helpers.s",
     "takeover.s",
+    "wbstartup.s",
     "input.s",
     "keyboard.s",
     "sprite.s",
@@ -148,6 +154,7 @@ $LibSources = @(
     "heap.s",
     "math.s",
     "bob.s",
+    "fileio.s",
     "ptplayer.s",
     "debug.s"
 ) | ForEach-Object { Join-Path $LibDir $_ }
@@ -172,6 +179,11 @@ foreach ($line in Get-Content $SourcePath) {
     }
 }
 $ExternSymbols = $ExternSymbols | Sort-Object -Unique
+
+$DebugExternUsed = $ExternSymbols | Where-Object { $_ -like "Debug*" } | Select-Object -First 1
+if ($DebugExternUsed -and -not (Test-Path (Join-Path $LibDir "debug.s"))) {
+    throw "$SourcePath declares Debug* externs, but required library '$LibDir\debug.s' is missing. Install/update highamigaassembler libs to include debug.s, or remove Debug* extern usage from source."
+}
 
 $WantLib = @{}
 foreach ($sym in $ExternSymbols) {
@@ -215,6 +227,7 @@ while ($changed) {
 $OrderedLibs = @(
     "helpers.s",
     "takeover.s",
+    "wbstartup.s",
     "graphics.s",
     "font8x8.s",
     "input.s",
@@ -226,6 +239,7 @@ $OrderedLibs = @(
     "heap.s",
     "math.s",
     "bob.s",
+    "fileio.s",
     "debug.s",
     "ptplayer.s"
 ) | ForEach-Object { Join-Path $LibDir $_ }
@@ -264,8 +278,27 @@ try {
 $GfxSpaceCode = if ($env:GFX_SPACE_CODE) { $env:GFX_SPACE_CODE } else { "32" }
 # font8x8.s glyph 0 (index = char - 32) is already blank, so space must map there.
 $GfxSpaceGlyph = if ($env:GFX_SPACE_GLYPH) { $env:GFX_SPACE_GLYPH } else { "0" }
+$Disable640x256 = if ($env:DISABLE_640x256 -eq "1") { $true } else { $false }
+$DisableHam = if ($env:DISABLE_HAM -eq "1") { $true } else { $false }
+$SourceBaseName = [IO.Path]::GetFileNameWithoutExtension($SourcePath)
+switch ($SourceBaseName.ToLowerInvariant()) {
+    "jetpac" {
+        $Disable640x256 = $true
+        $DisableHam = $true
+    }
+    "frontpage" {
+        $Disable640x256 = $true
+        $DisableHam = $false
+    }
+}
 $VasmArgs = @("-m68000", "-Fhunk", "-kick1hunks", "-nowarn=62", "-quiet", "-I", $LibDir)
 $VasmArgs += @("-D", "GFX_SPACE_CODE=$GfxSpaceCode", "-D", "GFX_SPACE_GLYPH=$GfxSpaceGlyph")
+if ($Disable640x256) {
+    $VasmArgs += @("-D", "DISABLE_640x256=1")
+}
+if ($DisableHam) {
+    $VasmArgs += @("-D", "DISABLE_HAM=1")
+}
 & $Vasm @VasmArgs $OutS "-o" $OutO
 if ($LASTEXITCODE -ne 0) {
     throw "Assembly of main source failed with exit code $LASTEXITCODE"
@@ -311,6 +344,12 @@ if (Test-Path $StarC) {
     # the opt/idnt directives that vbccm68k emits, add -nowarn=62 as per vbcc config.
     $VbccVasmArgs = @("-m68000", "-Fhunk", "-nowarn=62", "-quiet", "-I", $LibDir)
     $VbccVasmArgs += @("-D", "GFX_SPACE_CODE=$GfxSpaceCode", "-D", "GFX_SPACE_GLYPH=$GfxSpaceGlyph")
+    if ($Disable640x256) {
+        $VbccVasmArgs += @("-D", "DISABLE_640x256=1")
+    }
+    if ($DisableHam) {
+        $VbccVasmArgs += @("-D", "DISABLE_HAM=1")
+    }
     & $Vasm @VbccVasmArgs $StarS "-o" $StarO
     if ($LASTEXITCODE -ne 0) {
         throw "Assembly of star_c.s failed with exit code $LASTEXITCODE"
