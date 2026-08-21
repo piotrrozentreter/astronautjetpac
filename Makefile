@@ -39,7 +39,8 @@ GAME_LIBRARY_OBJECTS := $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(LIBS)))
 
 GFX_SPACE_CODE ?= 32
 GFX_SPACE_GLYPH ?= 0
-COMMON_DEFINES := -D GFX_SPACE_CODE=$(GFX_SPACE_CODE) -D GFX_SPACE_GLYPH=$(GFX_SPACE_GLYPH)
+HEAP_MEMORY ?= 141308
+COMMON_DEFINES := -D GFX_SPACE_CODE=$(GFX_SPACE_CODE) -D GFX_SPACE_GLYPH=$(GFX_SPACE_GLYPH) -D HEAP_MEMORY=$(HEAP_MEMORY)
 VASM_FLAGS := -m$(CPU) -quiet -Fhunk -kick1hunks -I $(LIB_DIR) $(COMMON_DEFINES)
 VBCC_VASM_FLAGS := -m$(CPU) -quiet -Fhunk -kick1hunks -nowarn=62 -I $(LIB_DIR) $(COMMON_DEFINES)
 
@@ -65,7 +66,7 @@ check-tools:
 $(BUILD_DIR)/jetpac.exe: jetpac.has $(ASSET_OBJECTS) $(JETPAC_OBJECTS) $(STAR_OBJECT) | $(BUILD_DIR) check-tools
 	@echo "=== Build: $< ($(CPU)) ==="
 	$(HASC_COMMAND) "$<" --cpu "$(CPU)" -o "$(BUILD_DIR)/jetpac.s"
-	$(VASM) $(VASM_FLAGS) -D DISABLE_640x256=1 -D DISABLE_HAM=1 -D HEAP_MEMORY=141308 "$(BUILD_DIR)/jetpac.s" -o "$(BUILD_DIR)/jetpac.o"
+	$(VASM) $(VASM_FLAGS) -D DISABLE_640x256=1 -D DISABLE_HAM=1 "$(BUILD_DIR)/jetpac.s" -o "$(BUILD_DIR)/jetpac.o"
 	$(VLINK) -bamigahunk -Bstatic "$(BUILD_DIR)/jetpac.o" $(JETPAC_OBJECTS) $(ASSET_OBJECTS) $(STAR_OBJECT) -o "$@"
 
 $(BUILD_DIR)/frontpage.exe: frontpage.has $(ASSET_OBJECTS) $(FRONTPAGE_OBJECTS) $(STAR_OBJECT) | $(BUILD_DIR) check-tools
@@ -104,4 +105,4 @@ list-modules:
 
 help:
 	@echo "Targets: all, jetpac, frontpage, game, clean, rebuild, list-modules"
-	@echo "Overrides: CPU=68000|68020 HASC_PYTHON=... HASC_ROOT=... VASM=... VLINK=... VBCC_CC=... LIBS='graphics input'"
+	@echo "Overrides: CPU=68000|68020 HEAP_MEMORY=141308 HASC_PYTHON=... HASC_ROOT=... VASM=... VLINK=... VBCC_CC=... LIBS='graphics input'"
