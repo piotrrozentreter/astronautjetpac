@@ -234,7 +234,7 @@ const MENU_TITLE_SHOW_FRAMES = 100;
 const MENU_LADDER_SHOW_FRAMES = 100;
 const GADGET_TYPE_EDITBOX = 2;
 
-const F1_DEBUG = 1;
+const F1_DEBUG = 0;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -395,7 +395,7 @@ main:
 
     proc load_all_assets() -> int {
         var id:long;
-        var pal:int;
+        var pal:ptr;
         var i:int;
 
         // Only create BOBs actually referenced by the render loop.
@@ -1478,7 +1478,7 @@ main:
         var i:int;
         var row:int;
         var base:int;
-        var name_ptr:int;
+        var name_ptr:ptr;
         var rank_ptr:int;
 
         call Text(40/2-17/2, 2, &ladder_title_text, HUD_TEXT_COLOR_IDX);
@@ -2053,7 +2053,7 @@ main:
         return 0;
     }
 
-    proc highscore_insert_new_top(score:int, name_ptr:long) -> void {
+    proc highscore_insert_new_top(score:int, name_ptr:ptr) -> void {
         var i:int;
         var j:int;
         var insert_pos:int;
@@ -2472,13 +2472,13 @@ main:
         call prime_level_buffers(player_bob_right, player_bob_right_b);
         call SwitchMusic(0);
 
-#ifdef F1_DEBUG
+#if F1_DEBUG=1
         var key:byte;
 #endif
 
         while (run == 1)
         {
-#ifdef F1_DEBUG
+#if F1_DEBUG=1
             key = GetKey();
             if(key == KEY_F1)
             {
