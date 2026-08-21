@@ -9,7 +9,6 @@ extern func ClearScreen() -> void;
 extern func LoadPalette(palette_ptr:int, num_colors:int) -> void;
 extern func ShowPicture(picture_addr:int) -> int;
 extern func UpdateCopperList() -> void;
-extern func SwapScreen() -> void;
 extern func WaitVBlank() -> void;
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
