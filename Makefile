@@ -27,10 +27,10 @@ ASSET_SOURCES := $(sort $(wildcard assets/*.s))
 ASSET_OBJECTS := $(patsubst assets/%.s,$(BUILD_DIR)/%.o,$(ASSET_SOURCES))
 STAR_OBJECT := $(BUILD_DIR)/star.o
 
-LIBRARY_NAMES := helpers takeover wbstartup graphics font8x8 input keyboard sprite gui gui_keyboard str heap math bob fileio debug ptplayer
+LIBRARY_NAMES := helpers cpu timer takeover wbstartup graphics font8x8 input keyboard sprite gui gui_keyboard str heap math bob fileio debug ptplayer
 LIBRARY_SOURCES := $(addprefix $(LIB_DIR)/,$(addsuffix .s,$(LIBRARY_NAMES)))
 LIBRARY_OBJECTS := $(patsubst $(LIB_DIR)/%.s,$(BUILD_DIR)/%.o,$(LIBRARY_SOURCES))
-JETPAC_LIBRARIES := helpers takeover wbstartup graphics font8x8 input keyboard sprite gui gui_keyboard heap bob fileio debug ptplayer
+JETPAC_LIBRARIES := helpers cpu timer takeover wbstartup graphics font8x8 input keyboard sprite gui gui_keyboard heap bob fileio debug ptplayer
 FRONTPAGE_LIBRARIES := helpers takeover graphics input keyboard sprite
 JETPAC_OBJECTS := $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(JETPAC_LIBRARIES)))
 FRONTPAGE_OBJECTS := $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(FRONTPAGE_LIBRARIES)))

@@ -25,7 +25,7 @@
 #define NUM_PLANES      5
 #define BYTES_PER_ROW   (SCREEN_WIDTH / 8)            /* 40  */
 #define ROW_STRIDE      (NUM_PLANES * BYTES_PER_ROW)  /* 200 */
-#define NUM_STARS       20
+#define NUM_STARS       40
 
 typedef unsigned char  u8;
 typedef unsigned short u16;

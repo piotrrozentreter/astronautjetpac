@@ -23,6 +23,8 @@ extern func WBStartup() -> void;
 extern func WBExit() -> void;
 extern func TakeSystem() -> void;
 extern func ReleaseSystem() -> void;
+extern func GetCPUType() -> int;
+extern func WaitMs(ms: int) -> void;
 
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
@@ -235,6 +237,7 @@ const MENU_LADDER_SHOW_FRAMES = 100;
 const GADGET_TYPE_EDITBOX = 2;
 
 const F1_DEBUG = 0;
+const CHIP_RAM = 1; //1MB Chip RAM (comment out the music2 in music_data.s)
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -247,6 +250,7 @@ code main:
 
     asm {
 main:
+        jsr ReadCPU
         jsr WBStartup       ; pick up Workbench message (no-op from CLI)
         jsr highscore_load_dos
         jsr TakeSystem
@@ -262,6 +266,10 @@ main:
         rts
     }
 
+    native proc ReadCPU() -> void {
+        cpu_type = GetCPUType();
+    }
+
     native proc peek_b(__reg(a0) a: long) -> byte {
         asm {
             moveq #0,d0
@@ -271,7 +279,7 @@ main:
 
     // Wait exactly one new video frame (prevents fast CPUs from returning
     // multiple times while the beam is still on the same VBlank line).
-    proc WaitFrame() -> void {
+    native proc WaitFrame() -> void {
         asm {
             movem.l d0,-(sp)
 .wf_leave_line:
@@ -288,7 +296,7 @@ main:
         }
     }
 
-    proc InitSound() -> void {
+    native proc InitSound() -> void {
         asm {
             movem.l    d0/a0/a6,-(sp)
 
@@ -364,7 +372,12 @@ main:
             movem.l    (sp)+,d1
             cmpi.l     #1,d1
             beq.s      .switch_music1
+            cmpi.l     #2,d1
+            beq.s      .switch_music2
             lea        music,a0
+            bra.s      .switch_music_ready
+.switch_music2:
+            lea        music2,a0
             bra.s      .switch_music_ready
 .switch_music1:
             lea        music1,a0
@@ -381,7 +394,7 @@ main:
         }
     }
 
-    proc QuitSound() -> void {
+    native proc QuitSound() -> void {
         asm {
             movem.l    a6,-(sp)
 
@@ -1537,7 +1550,11 @@ main:
         var menu_view:int;
         var menu_view_timer:int;
 
+#if CHIP_RAM=1
         call QuitSound();
+#else
+        call SwitchMusic(2);
+#endif
         if(highscore_needs_insert != 0)
         {
             call run_highscore_name_entry(current_score);
@@ -1572,6 +1589,10 @@ main:
 
         while (1)
         {
+            if(cpu_type > 0)
+            {
+                WaitMs(15);
+            }
             key = GetKey();
             if(key == KEY_ESC)
             {
@@ -2478,6 +2499,11 @@ main:
 
         while (run == 1)
         {
+            if(cpu_type > 0)
+            {
+                WaitMs(15);
+            }
+
 #if F1_DEBUG=1
             key = GetKey();
             if(key == KEY_F1)
@@ -2920,6 +2946,10 @@ main:
 
         while(transition_done == 0)
         {
+            if(cpu_type > 0)
+            {
+                WaitMs(15);
+            }
             call SwapScreen();
             call CopyLevelBuffer();
             call PasteBob(rocket_bob_a, ROCKET_POS_X, rocket_y, 1);
@@ -4130,6 +4160,7 @@ bss level_bss:
     level_screen.b[51200]   // 320 * 256 / 8 * 5 bitplanes
     
 data main_data:
+    cpu_type.w = 0
     player_x.w = 0
     player_y.w = 0
     level_dirty.b = 0
