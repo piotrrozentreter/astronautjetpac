@@ -1550,7 +1550,7 @@ main:
         var menu_view:int;
         var menu_view_timer:int;
 
-#if CHIP_RAM=1
+#if CHIP_RAM==1
         call QuitSound();
 #else
         call SwitchMusic(2);
@@ -2493,7 +2493,7 @@ main:
         call prime_level_buffers(player_bob_right, player_bob_right_b);
         call SwitchMusic(0);
 
-#if F1_DEBUG=1
+#if F1_DEBUG==1
         var key:byte;
 #endif
 
@@ -2504,7 +2504,7 @@ main:
                 WaitMs(15);
             }
 
-#if F1_DEBUG=1
+#if F1_DEBUG==1
             key = GetKey();
             if(key == KEY_F1)
             {
