@@ -176,7 +176,7 @@ const METEOR_BOB_W_M1 = 47;   // last pixel column of 48px-wide meteor
 const METEOR_START_X = 272;   // spawn at visible right edge (320 - 48)
 const METEOR_LEFT_START_X = 0; // spawn at visible left edge
 const METEOR_MIN_Y = 16;      // minimum spawn Y (top guard)
-const METEOR_MAX_Y = 176;     // keep BOB fully inside 320x256 display
+const METEOR_MAX_Y = 176+26;     // keep BOB fully inside 320x256 display
 const METEOR_SPAWN_Y_RANGE = 224; // [16..239] inclusive
 const METEOR_SPAWN_DELAY = 40; // frames between successive spawns
 const ALIEN_TYPE_METEOR = 0;  // type index for horizontal meteors (future types: 1, 2 …)
@@ -189,7 +189,7 @@ const METEOR_DIR_RIGHT = 1;
 const UFO_VDIR_UP = 0;
 const UFO_VDIR_DOWN = 1;
 const UFO_VERT_SPEED = 1;
-const MAX_EXPLOSIONS = 2;            // 2 slots x 8 BOBs = 16 BOBs; keep small to fit heap
+const MAX_EXPLOSIONS = 3;            // 2 slots x 8 BOBs = 16 BOBs; keep small to fit heap
 const EXPLOSION_ANIM_FRAMES = 4;     // expl_1 .. expl_4
 const EXPLOSION_ANIM_RATE = 3;       // frames per explosion cel
 const EXPLOSION_MAX_X = 288;         // 32x32 sprite in 320-wide display
@@ -236,7 +236,7 @@ const MENU_TITLE_SHOW_FRAMES = 100;
 const MENU_LADDER_SHOW_FRAMES = 100;
 const GADGET_TYPE_EDITBOX = 2;
 
-const F1_DEBUG = 0;
+const F1_DEBUG = 1;
 const CHIP_RAM = 1; //1MB Chip RAM (comment out the music2 in music_data.s)
 
     public CreateMap;
@@ -3328,6 +3328,15 @@ main:
                     continue;
                 }
 
+                if((i & 1) == 1)
+                {
+                    next_y++;
+                }
+                else if((i & 3) != 0)
+                {
+                    next_y--;
+                }
+
                 probe_y_top = next_y + 1;
                 probe_y_mid = next_y + (bob_h >> 1);
                 probe_y_bot = next_y + bob_h - 1;
@@ -3343,6 +3352,7 @@ main:
                 }
 
                 meteor_x[i] = next_x;
+                meteor_y[i] = next_y;
             }
             else if (alien_type == ALIEN_TYPE_UFO_0002)
             {
@@ -3399,10 +3409,16 @@ main:
                 if (meteor_vdir[i] == UFO_VDIR_DOWN) { next_y = next_y + UFO_VERT_SPEED + (i & 1); }
                 else                                  { next_y = next_y - UFO_VERT_SPEED - (i & 1); }
 
-                if (next_x > METEOR_START_X || next_x < 0)
+                if(next_x > METEOR_START_X)
                 {
-                    meteor_active[i] = 0;
-                    meteor_spawn_timer = 0;
+                    next_x = METEOR_START_X;
+                    meteor_dir[i] = METEOR_DIR_LEFT;
+                    continue;
+                }
+                else if(next_x < 0)
+                {
+                    next_x = 0;
+                    meteor_dir[i] = METEOR_DIR_RIGHT;
                     continue;
                 }
 
@@ -4131,7 +4147,7 @@ data data_map1:
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,29,0,0,0,0,37,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

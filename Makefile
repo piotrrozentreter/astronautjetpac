@@ -20,6 +20,7 @@ VLINK ?= vlink
 VBCC_CC ?= vbccm68k
 VBCC_ROOT ?=
 VBCC_INCLUDE := $(if $(VBCC_ROOT),$(VBCC_ROOT)/targets/m68k-amigaos/include)
+VBCC_OPT_FLAGS := -O=131
 
 MODULES := jetpac frontpage
 EXES := $(addprefix $(BUILD_DIR)/,$(addsuffix .exe,$(MODULES)))
@@ -82,7 +83,7 @@ $(BUILD_DIR)/%.o: $(LIB_DIR)/%.s | $(BUILD_DIR) check-tools
 	$(VASM) $(VASM_FLAGS) "$<" -o "$@"
 
 $(BUILD_DIR)/star_c.s: star.c | $(BUILD_DIR) check-tools
-	$(VBCC_CC) -cpu=$(CPU) -quiet -o="$@" $(if $(wildcard $(VBCC_INCLUDE)),-I=$(VBCC_INCLUDE)) "$<"
+	$(VBCC_CC) -cpu=$(CPU) -quiet $(VBCC_OPT_FLAGS) -o="$@" $(if $(wildcard $(VBCC_INCLUDE)),-I=$(VBCC_INCLUDE)) "$<"
 
 $(STAR_OBJECT): $(BUILD_DIR)/star_c.s | $(BUILD_DIR) check-tools
 	$(VASM) $(VBCC_VASM_FLAGS) "$<" -o "$@"
