@@ -1,5 +1,7 @@
 // (c) 2026 by Rozsoft.
 
+// Putting everything into one file was intentional (just like in the good old days :) )
+
 #pragma lockreg(a5);
 
 extern func SetGraphicsMode(mode:int) -> int;
@@ -26,6 +28,9 @@ extern func ReleaseSystem() -> void;
 extern func GetCPUType() -> int;
 extern func WaitMs(ms: int) -> void;
 
+extern func SeedRnd(seed: int) -> void;
+extern func RndMaxAMOS(max: int) -> int;
+
 extern func InitKeyboard() -> void;
 extern func GetKey() -> byte;
 extern func ReadJoystick() -> u32;
@@ -40,6 +45,15 @@ extern func DestroyBob(handle:int) -> void;
 extern func GetBobBackground(handle:int, x:int, y:int) -> void;
 extern func PasteBackground(handle:int, x:int, y:int) -> void;
 extern func GetBobPalette(handle:int) -> int;
+
+extern func CreateSprite(index:int, src: int) -> int;
+extern func SetSpriteShape(index:int, src:int) -> void;
+extern func SetSpritePosition(index:int, x:int, y:int) -> void;
+extern func UpdateSpritePointers() -> void;
+extern func ShowSprite(index:int) -> void;
+extern func ShowSprites() -> void;
+extern func HideSprite(index:int) -> void;
+extern func HideSprites() -> void;
 
 extern func FileIoInit() -> int;
 extern func FileIoDone() -> int;
@@ -116,6 +130,13 @@ extern var jetpacspritesheet_walkfr2:int;
 extern var jetpacspritesheet_walkfr3:int;
 extern var jetpacspritesheet_walkfr4:int;
 extern var jetpacspritesheet_walkfr5:int;
+
+extern var sprite_J:int;
+extern var sprite_E:int;
+extern var sprite_T:int;
+extern var sprite_P:int;
+extern var sprite_A:int;
+extern var sprite_C:int;
 
 const KEY_ESC = 69;
 const KEY_F1 = $50;
@@ -215,6 +236,7 @@ const SFX_JET = 3;
 const SFX_ENERGY = 4;
 const SFX_FUEL_PICKUP = 5;
 const SFX_PLAYER_DEATH = 6;
+const SFX_LETTER = 7;
 
 const MAX_LEVELS = 5;                  // available map/alien pages
 const MAX_GAME_LEVEL = 99;
@@ -235,6 +257,8 @@ const MENU_VIEW_LADDER = 1;
 const MENU_TITLE_SHOW_FRAMES = 100;
 const MENU_LADDER_SHOW_FRAMES = 100;
 const GADGET_TYPE_EDITBOX = 2;
+const MAX_SPRITES = 8;
+const START_LETTERS_WHEN = 1;    //starts letters when gathered the amount of energy cells
 
 const F1_DEBUG = 1;
 const CHIP_RAM = 1; //1MB Chip RAM (comment out the music2 in music_data.s)
@@ -406,6 +430,23 @@ main:
         }
     }
 
+    proc load_all_sprites() -> int {
+        var id:int;
+
+        id = CreateSprite(0, &sprite_J); if(id == -1){return -1;}
+        id = CreateSprite(1, &sprite_E); if(id == -1){return -1;}
+        id = CreateSprite(2, &sprite_T); if(id == -1){return -1;}
+        id = CreateSprite(3, &sprite_P); if(id == -1){return -1;}
+        id = CreateSprite(4, &sprite_A); if(id == -1){return -1;}
+        id = CreateSprite(5, &sprite_C); if(id == -1){return -1;}
+        id = CreateSprite(6, &sprite_J); if(id == -1){return -1;}
+        id = CreateSprite(7, &sprite_J); if(id == -1){return -1;}
+
+        HideSprites();
+
+        return 0;
+    }
+
     proc load_all_assets() -> int {
         var id:long;
         var pal:ptr;
@@ -541,6 +582,12 @@ main:
         id = CreateBob(&jetpacspritesheet_energy, 1); if (id == -1) { return -1; } energy_bob_b = id;
 
         player_face_right = 1;
+
+        if(load_all_sprites() == -1)
+        {
+            call DebugLogStr(&dbg_err_sprites);
+            return -1;
+        }
 
         pal = GetBobPalette(player_bob_right);
         call LoadPalette(pal, MAX_COLORS);
@@ -835,6 +882,10 @@ main:
             if(lvl < 1) { lvl = 1; }
             if(lvl > MAX_GAME_LEVEL) { lvl = MAX_GAME_LEVEL; }
             add_pts = SCORE_FOR_KILLING * lvl;
+            if(add_pts > 100)
+            {
+                add_pts = 100;
+            }
             add_score(add_pts);
             return 1;
         }
@@ -981,6 +1032,7 @@ main:
         fuel_prev_valid_b = 0;
     }
 
+
     proc spawn_energy() -> void {
         var rv:int;
 
@@ -995,6 +1047,65 @@ main:
         energy_ttl = ENERGY_VISIBLE_FRAMES;
         energy_prev_valid_a = 0;
         energy_prev_valid_b = 0;
+    }
+
+
+    proc spawn_letters() -> void {
+        var t:int;
+        var rnd:int;
+        var p:letter*;
+
+        letters_active = 0;
+
+        for t=0 to MAX_SPRITES-1
+        {
+            p = &letter[t];
+
+            p->x = t * 39;
+            p->y = t * 25;
+            p->active = 1;
+
+            rnd = RndMaxAMOS(3);
+            if(rnd == 0)
+            {
+                rnd = 1;
+            }
+            p->speedx = rnd;
+
+            rnd = RndMaxAMOS(3);
+            if(rnd == 0)
+            {
+                rnd = 1;
+            }
+            p->speedy = rnd;
+            
+            if((t & 1) == 1)
+            {
+                p->dx = -p->speedx;
+            }
+            else
+            {
+                p->dx = p->speedx;
+            }
+
+            p->dy = p->speedy;
+        }
+
+        ShowSprites();
+        for t = 0 to MAX_SPRITES-1
+        {
+            ShowSprite(t);
+        }
+
+        letters_active = 1;
+    }
+
+    extern func move_letters() -> void;
+    public letters_active;
+    public letter;
+
+    interrupt process_letters(0) -> void {
+        move_letters();
     }
 
     proc update_pickups() -> void {
@@ -1137,6 +1248,7 @@ main:
                 if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
                 {
                     energy_active = 0;
+                    energy_taken++;
                     add_score(SCORE_FOR_ENERGY);
                     call PlaySoundEffect(SFX_ENERGY);
                 }
@@ -1550,6 +1662,15 @@ main:
         var menu_view:int;
         var menu_view_timer:int;
 
+
+        letters_active = 0;
+        HideSprites();
+
+        for i = 0 to MAX_SPRITES - 1
+        {
+            HideSprite(i);
+        }
+
 #if CHIP_RAM==1
         call QuitSound();
 #else
@@ -1576,6 +1697,7 @@ main:
         menu_spawn_timer = 0;
         menu_view = MENU_VIEW_TITLE;
         menu_view_timer = MENU_TITLE_SHOW_FRAMES;
+        energy_taken = 0;
 
         // Title screen uses first 5 meteor slots for decorative fly-bys.
         for i = 0 to 4
@@ -2446,6 +2568,14 @@ main:
         call draw_hud_on_current_screen(1);
     }
 
+    proc check_letters_start() -> void {
+        if(energy_taken == START_LETTERS_WHEN && letters_active == 0)
+        {
+            energy_taken = 0;
+            spawn_letters();
+        }        
+    }
+
     proc game_start() -> int {
         var run:bool = 1;
         var screen:int = 1;
@@ -2466,6 +2596,7 @@ main:
 
         // Scatter the initial star field on the current video buffer.
         call _stars_init(gfx_current_screen_ptr);
+        call SeedRnd(12376);
 
         if(run_title_menu() == 0)
         {
@@ -2497,8 +2628,18 @@ main:
         var key:byte;
 #endif
 
+        starti(0);
+
         while (run == 1)
         {
+            if(letters_active == 1)
+            {
+                for i = 0 to MAX_SPRITES - 1
+                {
+                    SetSpritePosition(i, letter[i].x, letter[i].y);
+                }
+            }
+
             if(cpu_type > 0)
             {
                 WaitMs(15);
@@ -2520,6 +2661,8 @@ main:
             call check_player_meteor_collision();
             call update_explosions();
             call update_pickups();
+            call check_letters_start();
+            call check_player_letter_collision();
             call update_hud_state();
 
             if(screen == 0)
@@ -2539,6 +2682,7 @@ main:
                 prev_bob_a = draw_bob;
             }
 
+            call UpdateSpritePointers();
             call WaitFrame();
             call Show();
 
@@ -2682,6 +2826,7 @@ main:
             }
         }
 
+        endi(0);
         return 0;
     }
 
@@ -2726,6 +2871,49 @@ main:
         }
     }
 
+    proc check_player_letter_collision() -> void {
+        var i:int;
+        var p_left:int;
+        var p_right:int;
+        var p_top:int;
+        var p_bottom:int;
+        var m_right:int;
+        var m_bottom:int;
+        var all_caught:int = 1;
+
+        if (player_dead != 0) { return; }
+
+        p_left   = player_x + 10;
+        p_right  = player_x + PLAYER_BOB_W_M1 - 10;
+        p_top    = player_y;
+        p_bottom = player_y + PLAYER_BOB_H_M1;
+
+        for i = 0 to MAX_SPRITES - 1
+        {
+            if (letter[i].active == 0) { continue; }
+            all_caught = 0;
+
+            m_right  = letter[i].x + 16;
+            m_bottom = letter[i].y + 16 - 1;
+
+            if (p_right  < letter[i].x) { continue; }
+            if (p_left   > m_right)     { continue; }
+            if (p_bottom < letter[i].y) { continue; }
+            if (p_top    > m_bottom)    { continue; }
+
+            letter[i].active = 0;
+            HideSprite(i);
+            call PlaySoundEffect(SFX_LETTER);
+            return;
+        }
+
+        if(all_caught == 1)
+        {
+            letters_active = 0;
+            HideSprites();
+        }
+    }
+
     // Death sequence: fall to solid, play dead animation for ~3 s, then respawn or
     // call end_game.  Returns 0 = player respawned, 1 = game over.
     proc player_die() -> int {
@@ -2739,6 +2927,14 @@ main:
         var anim_bob:int;
         var wait_counter:int;
         var rv:int;
+
+        letters_active = 0;
+        HideSprites();
+
+        for i = 0 to MAX_SPRITES - 1
+        {
+            HideSprite(i);
+        }
 
         // Clear all active entities.
         for i = 0 to MAX_METEORS - 1
@@ -2765,6 +2961,7 @@ main:
         energy_active = 0;
         energy_prev_valid_a = 0;
         energy_prev_valid_b = 0;
+        energy_taken = 0;
 
         // If airborne, drop player to the nearest solid surface.
         fall_vy = vel_y;
@@ -2906,6 +3103,14 @@ main:
         var next_level:int;
         var transition_done:byte;
 
+        letters_active = 0;
+        HideSprites();
+        
+        for i = 0 to MAX_SPRITES - 1
+        {
+            HideSprite(i);
+        }
+
         for i = 0 to MAX_METEORS - 1
         {
             meteor_active[i] = 0;
@@ -2934,6 +3139,7 @@ main:
         energy_prev_valid_a = 0;
         energy_prev_valid_b = 0;
         level_completed = 0;
+        energy_taken = 0;
 
         next_level = current_level + 1;
         if(next_level > MAX_GAME_LEVEL) { next_level = MAX_GAME_LEVEL; }
@@ -4256,6 +4462,8 @@ data main_data:
     energy_prev_x_b.w = 0
     energy_prev_y_b.w = 0
     energy_prev_valid_b.b = 0
+    letters_active.b = 0
+    energy_taken.b = 0
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
@@ -4345,6 +4553,7 @@ data debug_strings:
     dbg_err_expl_bobs.b   = "[ERR] load_explosion_bobs failed", 0
     dbg_err_expl_alloc_a.b = "[ERR] expl CreateBob A failed at slot", 0
     dbg_err_expl_alloc_b.b = "[ERR] expl CreateBob B failed at slot", 0
+    dbg_err_sprites.b = "[ERR] load_all_sprites failed", 0
 
 data meteor_data:
     meteor_spawn_timer.w = 0
@@ -4373,6 +4582,9 @@ bss meteor_bss:
     meteor_prev_valid_b.l[MAX_METEORS]
     meteor_prev_dir_a.l[MAX_METEORS]
     meteor_prev_dir_b.l[MAX_METEORS]
+
+bss spr_bss:
+    struct letter[8] {x.l, y.l, dx.l, dy.l, speedx.l, speedy.l, active.l}
 
 bss explosion_bss:
     expl_slots_ready.l: 1

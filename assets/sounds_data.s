@@ -13,6 +13,7 @@ SFX_PRI_JET         equ 238
 SFX_PRI_ENERGY      equ 255
 SFX_PRI_PICKUP      equ 225
 SFX_PRI_DEAD        equ 255
+SFX_PRI_LETTER      equ 254
 
     SECTION    sounds,DATA_C
 
@@ -58,6 +59,12 @@ sfx_dead:
     incbin     "sfx_death.raw"
     even
 sfx_dead_len   EQU (*-sfx_dead)/2
+
+sfx_letter:       
+    dc.w       0
+    incbin     "sfx_letter.raw"
+    even
+sfx_letter_len   EQU (*-sfx_letter)/2
 
     SECTION    sounds_data,CODE
 
@@ -119,3 +126,11 @@ sfx_table:
     dc.w       SFX_VOLUME                  
     dc.b       -1                           
     dc.b       SFX_PRI_DEAD    
+
+    ; 7 - letter catch sound effect
+    dc.l       sfx_letter
+    dc.w       sfx_letter_len              
+    dc.w       SFX_PERIOD                 
+    dc.w       SFX_VOLUME * 2                 
+    dc.b       -1                           
+    dc.b       SFX_PRI_LETTER    
