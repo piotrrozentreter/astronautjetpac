@@ -131,6 +131,13 @@ extern var jetpacspritesheet_walkfr3:int;
 extern var jetpacspritesheet_walkfr4:int;
 extern var jetpacspritesheet_walkfr5:int;
 
+extern var bob_Letter_J:int;
+extern var bob_Letter_E:int;
+extern var bob_Letter_T:int;
+extern var bob_Letter_P:int;
+extern var bob_Letter_A:int;
+extern var bob_Letter_C:int;
+
 extern var sprite_J:int;
 extern var sprite_E:int;
 extern var sprite_T:int;
@@ -261,7 +268,6 @@ const MAX_SPRITES = 8;
 const START_LETTERS_WHEN = 1;    //starts letters when gathered the amount of energy cells
 
 const F1_DEBUG = 1;
-const CHIP_RAM = 1; //1MB Chip RAM (comment out the music2 in music_data.s)
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -447,6 +453,19 @@ main:
         return 0;
     }
 
+    proc load_bob_letters() -> int {
+        var id:long;
+
+        id = CreateBob(&bob_Letter_J, 0); if (id == -1) { return -1; } asset_letters[0] = id;
+        id = CreateBob(&bob_Letter_E, 0); if (id == -1) { return -1; } asset_letters[1] = id;
+        id = CreateBob(&bob_Letter_T, 0); if (id == -1) { return -1; } asset_letters[2] = id;
+        id = CreateBob(&bob_Letter_P, 0); if (id == -1) { return -1; } asset_letters[3] = id;
+        id = CreateBob(&bob_Letter_A, 0); if (id == -1) { return -1; } asset_letters[4] = id;
+        id = CreateBob(&bob_Letter_C, 0); if (id == -1) { return -1; } asset_letters[5] = id;
+
+        return 0;
+    }
+
     proc load_all_assets() -> int {
         var id:long;
         var pal:ptr;
@@ -582,6 +601,12 @@ main:
         id = CreateBob(&jetpacspritesheet_energy, 1); if (id == -1) { return -1; } energy_bob_b = id;
 
         player_face_right = 1;
+
+        if(load_bob_letters() == -1)
+        {
+            call DebugLogStr(&dbg_err_load_letters);
+            return -1;
+        }
 
         if(load_all_sprites() == -1)
         {
@@ -882,9 +907,9 @@ main:
             if(lvl < 1) { lvl = 1; }
             if(lvl > MAX_GAME_LEVEL) { lvl = MAX_GAME_LEVEL; }
             add_pts = SCORE_FOR_KILLING * lvl;
-            if(add_pts > 100)
+            if(add_pts > 50)
             {
-                add_pts = 100;
+                add_pts = 50;
             }
             add_score(add_pts);
             return 1;
@@ -1248,7 +1273,10 @@ main:
                 if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
                 {
                     energy_active = 0;
-                    energy_taken++;
+                    if(letters_active == 0)
+                    {
+                        energy_taken++;
+                    }
                     add_score(SCORE_FOR_ENERGY);
                     call PlaySoundEffect(SFX_ENERGY);
                 }
@@ -1671,11 +1699,8 @@ main:
             HideSprite(i);
         }
 
-#if CHIP_RAM==1
-        call QuitSound();
-#else
         call SwitchMusic(2);
-#endif
+
         if(highscore_needs_insert != 0)
         {
             call run_highscore_name_entry(current_score);
@@ -3359,7 +3384,7 @@ main:
         var i:int;
 
         if (expl_slots_ready <= 0) { return; }
-        if (y < 64) { return; }  // don't spawn explosions in HUD area
+        if (y < 20) { return; }  // don't spawn explosions in HUD area
 
         for i = 0 to MAX_EXPLOSIONS - 1
         {
@@ -4512,6 +4537,7 @@ data highscore_gui_data:
 
 bss bobs_bss:
     asset_handles.l[TOTAL_BOB_ASSETS]
+    asset_letters.l[6]
     walk_left_bobs_b.l[6]
     walk_right_bobs_b.l[6]
     fire_stand_left_bobs_b.l[5]
@@ -4553,6 +4579,7 @@ data debug_strings:
     dbg_err_expl_bobs.b   = "[ERR] load_explosion_bobs failed", 0
     dbg_err_expl_alloc_a.b = "[ERR] expl CreateBob A failed at slot", 0
     dbg_err_expl_alloc_b.b = "[ERR] expl CreateBob B failed at slot", 0
+    dbg_err_load_letters.b = "[ERR] load_bob_letters failed", 0
     dbg_err_sprites.b = "[ERR] load_all_sprites failed", 0
 
 data meteor_data:

@@ -13,5 +13,4 @@ music1:
     incbin "music1.mod"
     even
 music2:
-    ;comment this out for 1MB build
-    ;incbin "music2.mod"
+    incbin "music2.mod"
