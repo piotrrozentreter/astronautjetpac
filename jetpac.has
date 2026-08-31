@@ -47,7 +47,6 @@ extern func PasteBackground(handle:int, x:int, y:int) -> void;
 extern func GetBobPalette(handle:int) -> int;
 
 extern func CreateSprite(index:int, src: int) -> int;
-extern func SetSpriteShape(index:int, src:int) -> void;
 extern func SetSpritePosition(index:int, x:int, y:int) -> void;
 extern func UpdateSpritePointers() -> void;
 extern func ShowSprite(index:int) -> void;
@@ -232,9 +231,14 @@ const FUEL_SPAWN_DELAY_RANGE = 180;
 const ENERGY_SPAWN_DELAY_MIN = 160;
 const ENERGY_SPAWN_DELAY_RANGE = 260;
 const ENERGY_VISIBLE_FRAMES = 500;   // 10 seconds at 50Hz
+const LETTER_VISIBLE_FRAMES = 400;   // 8 seconds at 50Hz
 const SCORE_FOR_KILLING = 5;
 const SCORE_FOR_ENERGY = 20;
+const SCORE_FOR_JETPAC = 100;
 const FUEL_VOLUME = 20;                 // fuel units per pickup
+const LETTER_CAPTION_X = 112;
+const LETTER_CAPTION_Y = 240;
+const LETTER_CAPTION_MASK_ALL = 63;
 
 const SFX_LASER = 0;
 const SFX_EXPLOSION = 1;
@@ -456,12 +460,12 @@ main:
     proc load_bob_letters() -> int {
         var id:long;
 
-        id = CreateBob(&bob_Letter_J, 0); if (id == -1) { return -1; } asset_letters[0] = id;
-        id = CreateBob(&bob_Letter_E, 0); if (id == -1) { return -1; } asset_letters[1] = id;
-        id = CreateBob(&bob_Letter_T, 0); if (id == -1) { return -1; } asset_letters[2] = id;
-        id = CreateBob(&bob_Letter_P, 0); if (id == -1) { return -1; } asset_letters[3] = id;
-        id = CreateBob(&bob_Letter_A, 0); if (id == -1) { return -1; } asset_letters[4] = id;
-        id = CreateBob(&bob_Letter_C, 0); if (id == -1) { return -1; } asset_letters[5] = id;
+        id = CreateBob(&bob_Letter_J, 1); if (id == -1) { return -1; } asset_letters[0] = id;
+        id = CreateBob(&bob_Letter_E, 1); if (id == -1) { return -1; } asset_letters[1] = id;
+        id = CreateBob(&bob_Letter_T, 1); if (id == -1) { return -1; } asset_letters[2] = id;
+        id = CreateBob(&bob_Letter_P, 1); if (id == -1) { return -1; } asset_letters[3] = id;
+        id = CreateBob(&bob_Letter_A, 1); if (id == -1) { return -1; } asset_letters[4] = id;
+        id = CreateBob(&bob_Letter_C, 1); if (id == -1) { return -1; } asset_letters[5] = id;
 
         return 0;
     }
@@ -1081,6 +1085,7 @@ main:
         var p:letter*;
 
         letters_active = 0;
+        letter_ttl = LETTER_VISIBLE_FRAMES;
 
         for t=0 to MAX_SPRITES-1
         {
@@ -1123,6 +1128,62 @@ main:
         }
 
         letters_active = 1;
+    }
+
+    proc update_letters() -> void {
+        if(letters_active == 0) { return; }
+
+        if(letter_ttl > 0) { letter_ttl = letter_ttl - 1; }
+        if(letter_ttl == 0)
+        {
+            letters_active = 0;
+            energy_taken = 0;
+            HideSprites();
+        }
+    }
+
+    proc draw_letter_caption_on_current_screen(use_b:byte) -> void {
+        var i:int;
+        var bit:int;
+        var x:int;
+
+        if(letter_caption_mask != 0)
+        {
+            x = LETTER_CAPTION_X;
+            bit = 1;
+            for i = 0 to 5
+            {
+                if((letter_caption_mask & bit) != 0)
+                {
+                    call GetBobBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                    call PasteBob(asset_letters[i], x, LETTER_CAPTION_Y, 1);
+                }
+                x = x + TILE_WIDTH;
+                bit = bit << 1;
+            }
+            if(use_b != 0) { letter_caption_valid_b = 1; }
+            else { letter_caption_valid_a = 1; }
+        }
+        else if(use_b != 0 && letter_caption_valid_b != 0)
+        {
+            x = LETTER_CAPTION_X;
+            for i = 0 to 5
+            {
+                call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                x = x + TILE_WIDTH;
+            }
+            letter_caption_valid_b = 0;
+        }
+        else if(use_b == 0 && letter_caption_valid_a != 0)
+        {
+            x = LETTER_CAPTION_X;
+            for i = 0 to 5
+            {
+                call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                x = x + TILE_WIDTH;
+            }
+            letter_caption_valid_a = 0;
+        }
     }
 
     extern func move_letters() -> void;
@@ -2559,6 +2620,7 @@ main:
         call erase_explosions_on_current_screen(use_b);
         call erase_pickups_on_current_screen(use_b);
         call PasteBackground(prev_bob, prev_x, prev_y);
+        call draw_letter_caption_on_current_screen(use_b);
 
         draw_bob = select_player_bob_for_buffer(use_b);
 
@@ -2687,6 +2749,7 @@ main:
             call update_explosions();
             call update_pickups();
             call check_letters_start();
+            call update_letters();
             call check_player_letter_collision();
             call update_hud_state();
 
@@ -2906,7 +2969,7 @@ main:
         var m_bottom:int;
         var all_caught:int = 1;
 
-        if (player_dead != 0) { return; }
+        if (player_dead != 0 || letters_active == 0) { return; }
 
         p_left   = player_x + 10;
         p_right  = player_x + PLAYER_BOB_W_M1 - 10;
@@ -2928,6 +2991,10 @@ main:
 
             letter[i].active = 0;
             HideSprite(i);
+            if(i < 6)
+            {
+                letter_caption_mask = letter_caption_mask | (1 << i);
+            }
             call PlaySoundEffect(SFX_LETTER);
             return;
         }
@@ -2935,7 +3002,13 @@ main:
         if(all_caught == 1)
         {
             letters_active = 0;
+            letter_ttl = 0;
             HideSprites();
+            if(letter_caption_mask == LETTER_CAPTION_MASK_ALL)
+            {
+                add_score(SCORE_FOR_JETPAC);
+                letter_caption_mask = 0;
+            }
         }
     }
 
@@ -2954,6 +3027,10 @@ main:
         var rv:int;
 
         letters_active = 0;
+        letter_ttl = 0;
+        letter_caption_mask = 0;
+        letter_caption_valid_a = 0;
+        letter_caption_valid_b = 0;
         HideSprites();
 
         for i = 0 to MAX_SPRITES - 1
@@ -3129,6 +3206,10 @@ main:
         var transition_done:byte;
 
         letters_active = 0;
+        letter_ttl = 0;
+        letter_caption_mask = 0;
+        letter_caption_valid_a = 0;
+        letter_caption_valid_b = 0;
         HideSprites();
         
         for i = 0 to MAX_SPRITES - 1
@@ -4489,6 +4570,10 @@ data main_data:
     energy_prev_valid_b.b = 0
     letters_active.b = 0
     energy_taken.b = 0
+    letter_ttl.w = 0
+    letter_caption_mask.b = 0
+    letter_caption_valid_a.b = 0
+    letter_caption_valid_b.b = 0
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
