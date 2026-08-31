@@ -26,6 +26,7 @@ MODULES := jetpac frontpage
 EXES := $(addprefix $(BUILD_DIR)/,$(addsuffix .exe,$(MODULES)))
 ASSET_SOURCES := $(sort $(wildcard assets/*.s))
 ASSET_OBJECTS := $(patsubst assets/%.s,$(BUILD_DIR)/%.o,$(ASSET_SOURCES))
+FRONTPAGE_ASSET_OBJECTS := $(filter-out $(BUILD_DIR)/move_letters.o,$(ASSET_OBJECTS))
 STAR_OBJECT := $(BUILD_DIR)/star.o
 
 LIBRARY_NAMES := helpers cpu timer takeover wbstartup graphics font8x8 input keyboard sprite gui gui_keyboard str heap math bob fileio debug ptplayer
@@ -70,11 +71,11 @@ $(BUILD_DIR)/jetpac.exe: jetpac.has $(ASSET_OBJECTS) $(JETPAC_OBJECTS) $(STAR_OB
 	$(VASM) $(VASM_FLAGS) -D DISABLE_640x256=1 -D DISABLE_HAM=1 "$(BUILD_DIR)/jetpac.s" -o "$(BUILD_DIR)/jetpac.o"
 	$(VLINK) -bamigahunk -Bstatic "$(BUILD_DIR)/jetpac.o" $(JETPAC_OBJECTS) $(ASSET_OBJECTS) $(STAR_OBJECT) -o "$@"
 
-$(BUILD_DIR)/frontpage.exe: frontpage.has $(ASSET_OBJECTS) $(FRONTPAGE_OBJECTS) $(STAR_OBJECT) | $(BUILD_DIR) check-tools
+$(BUILD_DIR)/frontpage.exe: frontpage.has $(FRONTPAGE_ASSET_OBJECTS) $(FRONTPAGE_OBJECTS) $(STAR_OBJECT) | $(BUILD_DIR) check-tools
 	@echo "=== Build: $< ($(CPU)) ==="
 	$(HASC_COMMAND) "$<" --cpu "$(CPU)" -o "$(BUILD_DIR)/frontpage.s"
 	$(VASM) $(VASM_FLAGS) -D DISABLE_640x256=1 "$(BUILD_DIR)/frontpage.s" -o "$(BUILD_DIR)/frontpage.o"
-	$(VLINK) -bamigahunk -Bstatic "$(BUILD_DIR)/frontpage.o" $(FRONTPAGE_OBJECTS) $(ASSET_OBJECTS) $(STAR_OBJECT) -o "$@"
+	$(VLINK) -bamigahunk -Bstatic "$(BUILD_DIR)/frontpage.o" $(FRONTPAGE_OBJECTS) $(FRONTPAGE_ASSET_OBJECTS) $(STAR_OBJECT) -o "$@"
 
 $(BUILD_DIR)/%.o: assets/%.s | $(BUILD_DIR) check-tools
 	$(VASM) $(VASM_FLAGS) "$<" -o "$@"
