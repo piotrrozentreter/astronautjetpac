@@ -239,6 +239,7 @@ const FUEL_VOLUME = 20;                 // fuel units per pickup
 const LETTER_CAPTION_X = 112;
 const LETTER_CAPTION_Y = 240;
 const LETTER_CAPTION_MASK_ALL = 63;
+const LETTER_CAPTION_MASK_END = 255;
 
 const SFX_LASER = 0;
 const SFX_EXPLOSION = 1;
@@ -1334,7 +1335,7 @@ main:
                 if (p_right >= f_left && p_left <= f_right && p_bottom >= f_top && p_top <= f_bottom)
                 {
                     energy_active = 0;
-                    if(letters_active == 0)
+                    if(letters_active == 0 && letter_caption_mask != LETTER_CAPTION_MASK_END)
                     {
                         energy_taken++;
                     }
@@ -3007,7 +3008,7 @@ main:
             if(letter_caption_mask == LETTER_CAPTION_MASK_ALL)
             {
                 add_score(SCORE_FOR_JETPAC);
-                letter_caption_mask = 0;
+                letter_caption_mask = LETTER_CAPTION_MASK_END;
             }
         }
     }
@@ -3975,7 +3976,7 @@ main:
             cur_x = expl_x[i];
             cur_y = expl_y[i];
             if (cur_x < 0 || cur_x > EXPLOSION_MAX_X) { continue; }
-            if (cur_y < 0 || cur_y > EXPLOSION_MAX_Y) { continue; }
+            if (cur_y < 16 || cur_y > EXPLOSION_MAX_Y) { continue; }
 
             frame = expl_frame[i];
             if (use_b != 0) { bob = expl_bobs_b[i]; }
@@ -4002,7 +4003,7 @@ main:
             cur_x = expl_x[i];
             cur_y = expl_y[i];
             if (cur_x < 0 || cur_x > EXPLOSION_MAX_X) { continue; }
-            if (cur_y < 64 || cur_y > EXPLOSION_MAX_Y) { continue; }
+            if (cur_y < 16 || cur_y > EXPLOSION_MAX_Y) { continue; }
 
             if (use_b != 0) { bob = expl_bobs_b[i]; }
             else            { bob = expl_bobs_a[i]; }
@@ -4696,7 +4697,7 @@ bss meteor_bss:
     meteor_prev_dir_b.l[MAX_METEORS]
 
 bss spr_bss:
-    struct letter[8] {x.l, y.l, dx.l, dy.l, speedx.l, speedy.l, active.l}
+    struct letter[8] {x:int, y:int, dx:int, dy:int, speedx:int, speedy:int, active.l}
 
 bss explosion_bss:
     expl_slots_ready.l: 1
