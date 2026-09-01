@@ -1139,6 +1139,7 @@ main:
         {
             letters_active = 0;
             energy_taken = 0;
+            letter_caption_mask = 0;
             HideSprites();
         }
     }
@@ -2657,7 +2658,7 @@ main:
     }
 
     proc check_letters_start() -> void {
-        if(energy_taken == START_LETTERS_WHEN && letters_active == 0)
+        if(energy_taken == START_LETTERS_WHEN && letters_active == 0 && letter_caption_mask != LETTER_CAPTION_MASK_END)
         {
             energy_taken = 0;
             spawn_letters();
