@@ -272,7 +272,7 @@ const GADGET_TYPE_EDITBOX = 2;
 const MAX_SPRITES = 8;
 const START_LETTERS_WHEN = 1;    //starts letters when gathered the amount of energy cells
 
-const F1_DEBUG = 1;
+const F1_DEBUG = 0;
 
     public CreateMap;
     public CopyLevelBuffer;
@@ -1132,6 +1132,8 @@ main:
     }
 
     proc update_letters() -> void {
+        var i:int;
+
         if(letters_active == 0) { return; }
 
         if(letter_ttl > 0) { letter_ttl = letter_ttl - 1; }
@@ -1139,8 +1141,18 @@ main:
         {
             letters_active = 0;
             energy_taken = 0;
-            letter_caption_mask = 0;
-            HideSprites();
+            if(letter_caption_mask != LETTER_CAPTION_MASK_END)
+            {
+                letter_caption_mask = 0;
+                letter_caption_drawn_a = 0;
+                letter_caption_drawn_b = 0;
+            }
+
+            for i = 0 to MAX_SPRITES - 1
+            {
+                letter[i].active = 0;
+                HideSprite(i);
+            }
         }
     }
 
@@ -1148,14 +1160,24 @@ main:
         var i:int;
         var bit:int;
         var x:int;
+        var prev_mask:int;
+        var draw_mask:int;
+
+        if(use_b != 0) { prev_mask = letter_caption_drawn_b; }
+        else { prev_mask = letter_caption_drawn_a; }
 
         if(letter_caption_mask != 0)
         {
+            draw_mask = letter_caption_mask;
             x = LETTER_CAPTION_X;
             bit = 1;
             for i = 0 to 5
             {
-                if((letter_caption_mask & bit) != 0)
+                if((prev_mask & bit) != 0 && (draw_mask & bit) == 0)
+                {
+                    call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                }
+                if((draw_mask & bit) != 0)
                 {
                     call GetBobBackground(asset_letters[i], x, LETTER_CAPTION_Y);
                     call PasteBob(asset_letters[i], x, LETTER_CAPTION_Y, 1);
@@ -1163,28 +1185,40 @@ main:
                 x = x + TILE_WIDTH;
                 bit = bit << 1;
             }
-            if(use_b != 0) { letter_caption_valid_b = 1; }
-            else { letter_caption_valid_a = 1; }
+            if(use_b != 0) { letter_caption_valid_b = 1; letter_caption_drawn_b = draw_mask; }
+            else { letter_caption_valid_a = 1; letter_caption_drawn_a = draw_mask; }
         }
         else if(use_b != 0 && letter_caption_valid_b != 0)
         {
             x = LETTER_CAPTION_X;
+            bit = 1;
             for i = 0 to 5
             {
-                call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                if((prev_mask & bit) != 0)
+                {
+                    call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                }
                 x = x + TILE_WIDTH;
+                bit = bit << 1;
             }
             letter_caption_valid_b = 0;
+            letter_caption_drawn_b = 0;
         }
         else if(use_b == 0 && letter_caption_valid_a != 0)
         {
             x = LETTER_CAPTION_X;
+            bit = 1;
             for i = 0 to 5
             {
-                call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                if((prev_mask & bit) != 0)
+                {
+                    call PasteBackground(asset_letters[i], x, LETTER_CAPTION_Y);
+                }
                 x = x + TILE_WIDTH;
+                bit = bit << 1;
             }
             letter_caption_valid_a = 0;
+            letter_caption_drawn_a = 0;
         }
     }
 
@@ -2998,6 +3032,17 @@ main:
                 letter_caption_mask = letter_caption_mask | (1 << i);
             }
             call PlaySoundEffect(SFX_LETTER);
+
+            if(letter_caption_mask == LETTER_CAPTION_MASK_ALL)
+            {
+                letters_active = 0;
+                letter_ttl = 0;
+                HideSprites();
+                add_score(SCORE_FOR_JETPAC);
+                letter_caption_mask = LETTER_CAPTION_MASK_END;
+                return;
+            }
+
             return;
         }
 
@@ -3033,6 +3078,8 @@ main:
         letter_caption_mask = 0;
         letter_caption_valid_a = 0;
         letter_caption_valid_b = 0;
+        letter_caption_drawn_a = 0;
+        letter_caption_drawn_b = 0;
         HideSprites();
 
         for i = 0 to MAX_SPRITES - 1
@@ -3212,6 +3259,8 @@ main:
         letter_caption_mask = 0;
         letter_caption_valid_a = 0;
         letter_caption_valid_b = 0;
+        letter_caption_drawn_a = 0;
+        letter_caption_drawn_b = 0;
         HideSprites();
         
         for i = 0 to MAX_SPRITES - 1
@@ -4576,6 +4625,8 @@ data main_data:
     letter_caption_mask.b = 0
     letter_caption_valid_a.b = 0
     letter_caption_valid_b.b = 0
+    letter_caption_drawn_a.b = 0
+    letter_caption_drawn_b.b = 0
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
