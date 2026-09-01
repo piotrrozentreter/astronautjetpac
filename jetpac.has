@@ -216,7 +216,7 @@ const METEOR_DIR_RIGHT = 1;
 const UFO_VDIR_UP = 0;
 const UFO_VDIR_DOWN = 1;
 const UFO_VERT_SPEED = 1;
-const MAX_EXPLOSIONS = 3;            // 2 slots x 8 BOBs = 16 BOBs; keep small to fit heap
+const MAX_EXPLOSIONS = 2;            // 2 slots x 8 BOBs = 16 BOBs; keep small to fit heap
 const EXPLOSION_ANIM_FRAMES = 4;     // expl_1 .. expl_4
 const EXPLOSION_ANIM_RATE = 3;       // frames per explosion cel
 const EXPLOSION_MAX_X = 288;         // 32x32 sprite in 320-wide display
@@ -1153,6 +1153,8 @@ main:
                 letter[i].active = 0;
                 HideSprite(i);
             }
+
+            HideSprites();
         }
     }
 
@@ -2950,6 +2952,7 @@ main:
             }
         }
 
+        QuitSound();
         endi(0);
         return 0;
     }
@@ -3040,7 +3043,6 @@ main:
                 HideSprites();
                 add_score(SCORE_FOR_JETPAC);
                 letter_caption_mask = LETTER_CAPTION_MASK_END;
-                return;
             }
 
             return;
