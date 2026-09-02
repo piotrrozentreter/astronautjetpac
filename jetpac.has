@@ -176,6 +176,7 @@ const HIGHSCORE_MAX_VALUE = 9999;
 
 const MAX_COLORS = 32;
 const HUD_TEXT_COLOR_IDX = 1;
+const HUD_TEXT_COLOR_IDX_2 = 8;
 const TOTAL_BOB_ASSETS = 54;
 const WALK_ANIM_FRAMES = 6;
 const WALK_ANIM_RATE = 4;
@@ -1755,7 +1756,7 @@ main:
             base = i * HIGHSCORE_NAME_STRIDE;
             name_ptr = &highscore_names;
             name_ptr = name_ptr + base;
-            call Text(10, row, name_ptr, HUD_TEXT_COLOR_IDX);
+            call Text(10, row, name_ptr, HUD_TEXT_COLOR_IDX_2);
 
             call ladder_write_score_text(highscore_scores[i]);
             call Text(28, row, &ladder_score_text, HUD_TEXT_COLOR_IDX);
@@ -1990,7 +1991,7 @@ main:
                 call GetBobBackground(player_bob, player_x, MENU_PLAYER_Y);
                 call PasteBob(player_bob, player_x, MENU_PLAYER_Y, 1);
 
-                call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX);
+                call Text(13, 1, &menu_high_text, HUD_TEXT_COLOR_IDX_2);
                 call Text(20-8, 18, &menu_title_text, HUD_TEXT_COLOR_IDX);
                 call Text(20-7, 20, &author_text, HUD_TEXT_COLOR_IDX);
                 call Text(40/2-10/2, 22, &menu_start_text, HUD_TEXT_COLOR_IDX);
@@ -4642,7 +4643,7 @@ data hud_strings:
     highscore_new_title_text.b = "new high score!", 0
     highscore_new_prompt_text.b = "enter your name", 0
     highscore_new_score_label_text.b = "score:", 0
-    highscore_new_hint_text.b = "return=ok, esc=skip", 0
+    highscore_new_hint_text.b = "return=ok esc=skip", 0
     ladder_rank_01.b = "01", 0
     ladder_rank_02.b = "02", 0
     ladder_rank_03.b = "03", 0
