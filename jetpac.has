@@ -229,6 +229,7 @@ const ROCKET_POS_X = 256;            // 64px wide rocket anchored at right edge 
 const ROCKET_POS_Y = 130;            // place in lower screen region (bottom 70%)
 const ROCKET_TOP_HEIGHT = 40;
 const ROCKET_CENTER_HEIGHT = 40;
+const ROCKET_PART_MAX_Y = 216;       // keep the 40px carried part inside 256px display
 const ROCKET_TOP_GROUND_X = 16;
 const ROCKET_TOP_GROUND_Y = 200;
 const ROCKET_CENTER_SHELF_X = 112;
@@ -1426,6 +1427,7 @@ main:
             rocket_part_x = player_x;
             rocket_part_y = player_y + 16;
             if (rocket_part_y < 0) { rocket_part_y = 0; }
+            if (rocket_part_y > ROCKET_PART_MAX_Y) { rocket_part_y = ROCKET_PART_MAX_Y; }
 
             if (player_x >= ROCKET_POS_X && player_x <= ROCKET_POS_X + 32)
             {
