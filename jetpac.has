@@ -3319,7 +3319,11 @@ main:
 
         letters_active = 0;
         letter_ttl = 0;
-        letter_caption_mask = 0;
+        // Keep the completed-word sentinel so JETPAC stays solved for this level.
+        if(letter_caption_mask != LETTER_CAPTION_MASK_END)
+        {
+            letter_caption_mask = 0;
+        }
         letter_caption_valid_a = 0;
         letter_caption_valid_b = 0;
         letter_caption_drawn_a = 0;
