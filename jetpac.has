@@ -251,6 +251,9 @@ const LETTER_CAPTION_X = 112;
 const LETTER_CAPTION_Y = 240;
 const LETTER_CAPTION_MASK_ALL = 63;
 const LETTER_CAPTION_MASK_END = 255;
+const BONUS_TEXT_X = 14;
+const BONUS_TEXT_Y = 15;
+const BONUS_VISIBLE_FRAMES = 200;
 
 const SFX_LASER = 0;
 const SFX_EXPLOSION = 1;
@@ -2771,6 +2774,21 @@ main:
         call Text(0, 0, &hud_line_text, HUD_TEXT_COLOR_IDX);
     }
 
+    proc draw_bonus_on_current_screen() -> void {
+        if(bonus_active != 0)
+        {
+            call Text(BONUS_TEXT_X, BONUS_TEXT_Y, &bonus_text, HUD_TEXT_COLOR_IDX);
+        }
+    }
+
+    proc update_bonus() -> void {
+        if(bonus_active != 0)
+        {
+            if(bonus_ttl > 0) { bonus_ttl = bonus_ttl - 1; }
+            if(bonus_ttl == 0) { bonus_active = 0; }
+        }
+    }
+
     proc init_game() -> int {
         var rv:int;
         player_x = 160 - 8;
@@ -2893,6 +2911,8 @@ main:
         call erase_rocket_part_on_current_screen(use_b);
         call PasteBackground(prev_bob, prev_x, prev_y);
         call clear_rocket_part_source_on_current_screen(use_b);
+        call RestoreLevelStrip(BONUS_TEXT_X * 8, BONUS_TEXT_Y * 8, 8);
+        call RestoreLevelStrip(BONUS_TEXT_X * 8 + 32, BONUS_TEXT_Y * 8, 8);
         call draw_letter_caption_on_current_screen(use_b);
 
         draw_bob = select_player_bob_for_buffer(use_b);
@@ -2911,6 +2931,7 @@ main:
         call draw_laser_on_current_screen(use_b);
         call draw_rocket_on_current_screen(use_b, rocket_bob);
         call draw_hud_on_current_screen(use_b);
+        call draw_bonus_on_current_screen();
 
         return draw_bob;
     }
@@ -3026,6 +3047,7 @@ main:
             call check_letters_start();
             call update_letters();
             call check_player_letter_collision();
+            call update_bonus();
             call update_hud_state();
 
             if(screen == 0)
@@ -3285,6 +3307,8 @@ main:
                 HideSprites();
                 add_score(SCORE_FOR_JETPAC);
                 letter_caption_mask = LETTER_CAPTION_MASK_END;
+                bonus_active = 1;
+                bonus_ttl = BONUS_VISIBLE_FRAMES;
             }
 
             return;
@@ -3299,6 +3323,8 @@ main:
             {
                 add_score(SCORE_FOR_JETPAC);
                 letter_caption_mask = LETTER_CAPTION_MASK_END;
+                bonus_active = 1;
+                bonus_ttl = BONUS_VISIBLE_FRAMES;
             }
         }
     }
@@ -3324,6 +3350,8 @@ main:
         letter_caption_valid_b = 0;
         letter_caption_drawn_a = 0;
         letter_caption_drawn_b = 0;
+        bonus_active = 0;
+        bonus_ttl = 0;
         HideSprites();
 
         for i = 0 to MAX_SPRITES - 1
@@ -3505,6 +3533,7 @@ main:
         letter_caption_valid_b = 0;
         letter_caption_drawn_a = 0;
         letter_caption_drawn_b = 0;
+        bonus_active = 0;
         HideSprites();
         
         for i = 0 to MAX_SPRITES - 1
@@ -4906,10 +4935,13 @@ data main_data:
     letter_caption_valid_b.b = 0
     letter_caption_drawn_a.b = 0
     letter_caption_drawn_b.b = 0
+    bonus_active.b = 0
+    bonus_ttl.w = 0
 
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
     hud_line_text.b = "score:0000  lives:3 l:01  hi:0000 f:000%", 0
+    bonus_text.b = "BONUS 100PTS", 0
     menu_title_text.b = "astronaut jet pac", 0
     menu_high_text.b = "high score: 0000", 0
     game_over_text.b = "game over", 0
