@@ -4941,7 +4941,7 @@ data main_data:
 data hud_strings:
     hud_digit_chars.b = "0123456789", 0
     hud_line_text.b = "score:0000  lives:3 l:01  hi:0000 f:000%", 0
-    bonus_text.b = "BONUS 100PTS", 0
+    bonus_text.b = "bonus 100pts", 0
     menu_title_text.b = "astronaut jet pac", 0
     menu_high_text.b = "high score: 0000", 0
     game_over_text.b = "game over", 0
