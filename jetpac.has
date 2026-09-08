@@ -2009,7 +2009,7 @@ main:
         var rocket_dx:int;
         var rocket_dy:int;
         var player_bob:int;
-        var pl_wait:int = 6;
+        var pl_wait:int = 3;
         var player_x:int;
         var player_dir:int;
         var player_frame:int;
@@ -2268,7 +2268,7 @@ main:
                 pl_wait = pl_wait - 1;
                 if(pl_wait <= 0)
                 {
-                    pl_wait = 6;
+                    pl_wait = 3;
                     player_frame = player_frame + 1;
                     if(player_frame >= WALK_ANIM_FRAMES)
                     {
