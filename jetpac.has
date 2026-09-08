@@ -180,6 +180,7 @@ const HIGHSCORE_MAX_VALUE = 9999;
 const MAX_COLORS = 32;
 const HUD_TEXT_COLOR_IDX = 1;
 const HUD_TEXT_COLOR_IDX_2 = 8;
+const HUD_TEXT_COLOR_IDX_3 = 9;
 const TOTAL_BOB_ASSETS = 54;
 const WALK_ANIM_FRAMES = 6;
 const WALK_ANIM_RATE = 4;
@@ -253,7 +254,7 @@ const LETTER_CAPTION_MASK_ALL = 63;
 const LETTER_CAPTION_MASK_END = 255;
 const BONUS_TEXT_X = 14;
 const BONUS_TEXT_Y = 15;
-const BONUS_VISIBLE_FRAMES = 200;
+const BONUS_VISIBLE_FRAMES = 100;
 
 const SFX_LASER = 0;
 const SFX_EXPLOSION = 1;
@@ -276,8 +277,9 @@ const MENU_ROCKET_STEP = 3;
 const MENU_ROCKET_MAX_X = 256;
 const MENU_PLAYER_MIN_X = 32;
 const MENU_PLAYER_MAX_X = 272;
-const MENU_PLAYER_STEP = 2;
+const MENU_PLAYER_STEP = 4;
 const MENU_PLAYER_Y = 168+10;
+const MENU_GROUND_Y = 208;
 const MENU_VIEW_TITLE = 0;
 const MENU_VIEW_LADDER = 1;
 const MENU_TITLE_SHOW_FRAMES = 100;
@@ -1487,6 +1489,7 @@ main:
             rocket_part_carried = 1;
             rocket_part_x = player_x;
             rocket_part_y = player_y + 16;
+            rocket_part_clear_state = rocket_part_state;
             rocket_part_source_clear_a = 1;
             rocket_part_source_clear_b = 1;
             call PlaySoundEffect(SFX_FUEL_PICKUP);
@@ -1560,7 +1563,7 @@ main:
             rocket_part_source_clear_a = 0;
         }
 
-        if (rocket_part_state == 0) { call RestoreLevelStrip(ROCKET_CENTER_SHELF_X, ROCKET_CENTER_SHELF_Y, ROCKET_CENTER_HEIGHT); }
+        if (rocket_part_clear_state == 0) { call RestoreLevelStrip(ROCKET_CENTER_SHELF_X, ROCKET_CENTER_SHELF_Y, ROCKET_CENTER_HEIGHT); }
         else { call RestoreLevelStrip(ROCKET_TOP_GROUND_X, ROCKET_TOP_GROUND_Y, ROCKET_TOP_HEIGHT); }
     }
 
@@ -1962,6 +1965,66 @@ main:
         }
     }
 
+    // Plain repeated ground tile (bottom 8x8 chunks only) across the full menu width.
+    native proc draw_menu_ground() -> void {
+        asm {
+            movem.l d0/d4/d7/a0-a3,-(sp)
+
+            move.l gfx_current_screen_ptr,a0
+            adda.l #41600,a0
+
+            moveq #19,d4
+.ground_tile:
+            move.l d4,d0
+            add.l d0,d0
+            movea.l a0,a2
+            adda.l d0,a2
+
+            ; bottom-left chunk of tileset tile 29 (tileset chunk index 120)
+            move.l #jetpack_tileset,a1
+            adda.l #4800,a1
+            movea.l a2,a3
+            moveq #7,d7
+.ground_bl:
+            move.b (a1)+,d0
+            move.b d0,(a3)
+            move.b (a1)+,d0
+            move.b d0,40(a3)
+            move.b (a1)+,d0
+            move.b d0,80(a3)
+            move.b (a1)+,d0
+            move.b d0,120(a3)
+            move.b (a1)+,d0
+            move.b d0,160(a3)
+            adda.l #200,a3
+            dbra d7,.ground_bl
+
+            ; bottom-right chunk of tileset tile 29 (tileset chunk index 121)
+            move.l #jetpack_tileset,a1
+            adda.l #4840,a1
+            movea.l a2,a3
+            adda.l #1,a3
+            moveq #7,d7
+.ground_br:
+            move.b (a1)+,d0
+            move.b d0,(a3)
+            move.b (a1)+,d0
+            move.b d0,40(a3)
+            move.b (a1)+,d0
+            move.b d0,80(a3)
+            move.b (a1)+,d0
+            move.b d0,120(a3)
+            move.b (a1)+,d0
+            move.b d0,160(a3)
+            adda.l #200,a3
+            dbra d7,.ground_br
+
+            dbra d4,.ground_tile
+
+            movem.l (sp)+,d0/d4/d7/a0-a3
+        }
+    }
+
     proc draw_ladder_screen() -> void {
         var i:int;
         var row:int;
@@ -1969,7 +2032,7 @@ main:
         var name_ptr:ptr;
         var rank_ptr:int;
 
-        call Text(40/2-17/2, 2, &ladder_title_text, HUD_TEXT_COLOR_IDX);
+        call Text(40/2-17/2, 2, &ladder_title_text, HUD_TEXT_COLOR_IDX_3);
         call Text(40/2-10/2, 29, &menu_start_text, HUD_TEXT_COLOR_IDX);
 
         for i = 0 to HIGHSCORE_ENTRIES - 1
@@ -2122,6 +2185,7 @@ main:
 
             if(menu_view == MENU_VIEW_TITLE)
             {
+                call draw_menu_ground();
                 if(menu_spawn_timer > 0)
                 {
                     menu_spawn_timer = menu_spawn_timer - 1;
@@ -2259,9 +2323,9 @@ main:
                     rocket_y = 0;
                     rocket_dy = -rocket_dy;
                 }
-                else if(rocket_y >= 256 - 121)
+                else if(rocket_y >= MENU_GROUND_Y - 121)
                 {
-                    rocket_y = 256 - 121;
+                    rocket_y = MENU_GROUND_Y - 121;
                     rocket_dy = -rocket_dy;
                 }
 
@@ -4901,6 +4965,7 @@ data main_data:
     rocket_part_prev_valid_b.b = 0
     rocket_part_source_clear_a.b = 0
     rocket_part_source_clear_b.b = 0
+    rocket_part_clear_state.b = 0
     fuel_active.b = 0
     fuel_falling.b = 0
     fuel_carried.b = 0
@@ -4945,12 +5010,12 @@ data hud_strings:
     menu_title_text.b = "astronaut jet pac", 0
     menu_high_text.b = "high score: 0000", 0
     game_over_text.b = "game over", 0
-    author_text.b = "by: rozsoft 2026", 0
+    author_text.b = "by rozsoft 2026", 0
     menu_start_text.b = "press fire", 0
     ladder_title_text.b = "high score ladder", 0
     highscore_new_title_text.b = "new high score!", 0
     highscore_new_prompt_text.b = "enter your name", 0
-    highscore_new_score_label_text.b = "score:", 0
+    highscore_new_score_label_text.b = "score ", 0
     highscore_new_hint_text.b = "return=ok esc=skip", 0
     ladder_rank_01.b = "01", 0
     ladder_rank_02.b = "02", 0
