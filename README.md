@@ -1,9 +1,9 @@
-# Astronaut Jet Pac
+# Astronaut Jet Pac: A Retro Amiga Experience
+(Jetpack-inspired gameplay)
 
 Version 1.0.3
 
-Astronaut Jet Pac is a Jet Pac-inspired game for the Amiga.
-The project is still in active development and focuses on gameplay, graphics, and retro presentation.
+The core gameplay experience has now reached its intended status. Development efforts have shifted from adding major features to focusing on polish and stability. Future updates will therefore be less frequent, typically addressing bug fixes, optimizing performance, and refining the retro presentation. ✨
 
 Music MODs by GrOgOn/CdS and cartoon
 
